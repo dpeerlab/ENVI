@@ -6,7 +6,7 @@
 Insatll ENVI (and COVET) through pypi:
  
 ```
-pip install --index-url https://test.pypi.org/simple/ ENVI_PeerLab==0.0.9
+!python3 -m pip install --index-url https://test.pypi.org/simple/ --no-deps scENVI
 
 ```
 
@@ -19,7 +19,7 @@ For a notebook on how to run ENVI and analyze the results, go to example noteboo
 
 To run ENVI:
 ```
-from ENVI_PeerLab import ENVI
+from scENVI import ENVI
 
 model = ENVI.ENVI(spatial_data = st_data, sc_data = sc_data)
 model.Train()
