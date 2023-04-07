@@ -6,7 +6,7 @@
 Insatll ENVI (and COVET) through pypi:
  
 ```
-!python3 -m pip install --index-url https://test.pypi.org/simple/ --no-deps scENVI
+python3 -m pip install --index-url https://test.pypi.org/simple/ --no-deps scENVI
 
 ```
 
