@@ -12,7 +12,7 @@ python3 -m pip install --index-url https://test.pypi.org/simple/ --no-deps scENV
 
 # Tutorial
 
-For a notebook on how to run ENVI and analyze the results, go to example notebook.
+For a tutorial on how to run ENVI and analyze the results, go to example notebook.
 
 
 # Usage
