@@ -1,0 +1,9 @@
+LICENSE
+README.md
+pyproject.toml
+scENVI/ENVI.py
+scENVI/__init__.py
+scENVI.egg-info/PKG-INFO
+scENVI.egg-info/SOURCES.txt
+scENVI.egg-info/dependency_links.txt
+scENVI.egg-info/top_level.txt
