@@ -50,14 +50,14 @@ And To run COVET (just on spatial data):
 
 ```
 ENVI.COVET(st_data, k = 8, g = 64,spatial_key = 'spatial')
-'''
+```
 
 COVET information will be in:
 
-'''
+```
 st_data.obsm['COVET'] 
 st_data.obsm['COVET_SQRT'] 
 st_data.uns['COVET_Genes']
-'''
+```
 
-# ENVI
+
