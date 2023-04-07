@@ -49,7 +49,7 @@ sc_data.uns['COVET_genes'] =  ENVI_Model.CovGenes
 And To run COVET (just on spatial data):
 
 ```
-ENVI.COVET(st_data, k = 8, g = 64,spatial_key = 'spatial')
+ENVI.COVET(st_data, k = 8, g = 64, spatial_key = 'spatial')
 ```
 
 COVET information will be in:
