@@ -21,8 +21,8 @@ To run ENVI:
 ```
 from scENVI import ENVI
 
-model = ENVI.ENVI(spatial_data = st_data, sc_data = sc_data)
-model.Train()
+ENVI_Model = ENVI.ENVI(spatial_data = st_data, sc_data = sc_data)
+ENVI_Model.Train()
 ENVI_Model.impute()
 ENVI_Model.infer_cov()
 
