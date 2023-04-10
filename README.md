@@ -3,10 +3,10 @@
 ![alt text](img/envi_schem.png?raw=true)
 
 # Installation 
-Install ENVI (and COVET) through pypi:
+Install ENVI (and COVET) through pypi (with dependencies):
  
 ```
-python3 -m pip install --index-url https://test.pypi.org/simple/ --no-deps scENVI
+pip install scENVI
 
 ```
 
