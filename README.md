@@ -1,6 +1,6 @@
 # ENVI - Integrating scRNA-seq and spatial data to impute missing genes and reconstruct spatial context 
 
-![alt text](img/envi_schem_.png?raw=true)
+![alt text](img/envi_schem.png?raw=true)
 
 # Installation 
 Install ENVI (and COVET) through pypi:
