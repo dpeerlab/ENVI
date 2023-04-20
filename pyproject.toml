@@ -5,11 +5,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "scENVI"
-version = "0.0.2"
+version = "0.1.0"
 authors = [
-  { name="Example Author", email="author@example.com" },
+  { name="Doron Haviv", email="doron.haviv12@gmail.com" },
 ]
-description = "A small example package"
+description = "ENVI"
 readme = "README.md"
 requires-python = ">=3.7"
 classifiers = [
@@ -17,7 +17,19 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
+dependencies = [
+    'tensorflow >= 2.4.0',
+    'tensorflow_probability >= 0.12.2',
+    'numpy>=1.22.4',
+    'scikit-learn>=1.2.1',
+    'scipy>=1.10.1',
+    'scanpy>=1.9.1',
+    'anndata>=0.8.0',
+    'pandas>=1.5.3',
+]
 
+    
+    
 [project.urls]
 "Homepage" = "https://github.com/pypa/sampleproject"
 "Bug Tracker" = "https://github.com/pypa/sampleproject/issues"

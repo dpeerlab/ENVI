@@ -1,0 +1,8 @@
+tensorflow>=2.4.0
+tensorflow_probability>=0.12.2
+numpy>=1.22.4
+scikit-learn>=1.2.1
+scipy>=1.10.1
+scanpy>=1.9.1
+anndata>=0.8.0
+pandas>=1.5.3

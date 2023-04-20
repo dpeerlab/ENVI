@@ -1,8 +1,8 @@
 Metadata-Version: 2.1
 Name: scENVI
-Version: 0.0.2
-Summary: A small example package
-Author-email: Example Author <author@example.com>
+Version: 0.1.0
+Summary: ENVI
+Author-email: Doron Haviv <doron.haviv12@gmail.com>
 Project-URL: Homepage, https://github.com/pypa/sampleproject
 Project-URL: Bug Tracker, https://github.com/pypa/sampleproject/issues
 Classifier: Programming Language :: Python :: 3
@@ -12,31 +12,29 @@ Requires-Python: >=3.7
 Description-Content-Type: text/markdown
 License-File: LICENSE
 
-# ENVI - Integrating scRNA-seq and spatial data to impute missing genes and recosntruct spatial context 
-
-![alt text](img/envi_schem.png?raw=true)
+# ENVI - Integrating scRNA-seq and spatial data to impute missing genes and reconstruct spatial context 
 
 # Installation 
-Insatll ENVI (and COVET) through pypi:
+Install ENVI (and COVET) through pypi:
  
 ```
-pip install --index-url https://test.pypi.org/simple/ ENVI_PeerLab==0.0.9
+pip install scENVI
 
 ```
 
 # Tutorial
 
-For a notebook on how to run ENVI and analyze the results, go to example notebook.
+For a tutorial on how to run ENVI and analyze the results, go to example notebook at: https://github.com/dpeerlab/ENVI/blob/main/MOp_MERFISH_tutorial.ipynb.
 
 
 # Usage
 
 To run ENVI:
 ```
-from ENVI_PeerLab import ENVI
+from scENVI import ENVI
 
-model = ENVI.ENVI(spatial_data = st_data, sc_data = sc_data)
-model.Train()
+ENVI_Model = ENVI.ENVI(spatial_data = st_data, sc_data = sc_data)
+ENVI_Model.Train()
 ENVI_Model.impute()
 ENVI_Model.infer_cov()
 
@@ -63,14 +61,15 @@ sc_data.uns['COVET_genes'] =  ENVI_Model.CovGenes
 And To run COVET (just on spatial data):
 
 ```
-ENVI.COVET(st_data, k = 8, g = 64,spatial_key = 'spatial')
-'''
+ENVI.COVET(st_data, k = 8, g = 64, spatial_key = 'spatial')
+```
 
 COVET information will be in:
 
-'''
+```
 st_data.obsm['COVET'] 
 st_data.obsm['COVET_SQRT'] 
 st_data.uns['COVET_Genes']
-'''
+```
+
 

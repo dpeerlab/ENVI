@@ -1,9 +1,7 @@
 # ENVI - Integrating scRNA-seq and spatial data to impute missing genes and reconstruct spatial context 
 
-![alt text](img/envi_schem.png?raw=true)
-
 # Installation 
-Install ENVI (and COVET) through pypi (with dependencies):
+Install ENVI (and COVET) through pypi:
  
 ```
 pip install scENVI
@@ -12,7 +10,7 @@ pip install scENVI
 
 # Tutorial
 
-For a tutorial on how to run ENVI and analyze the results, go to example notebook.
+For a tutorial on how to run ENVI and analyze the results, go to example notebook at: https://github.com/dpeerlab/ENVI/blob/main/MOp_MERFISH_tutorial.ipynb.
 
 
 # Usage
