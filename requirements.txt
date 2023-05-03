@@ -1,5 +1,7 @@
 # This file may be used to create an environment using:
-# $ conda create --name <env> --file <this file>
+# $ conda create --name ENVI --file requirements.txt
+# or in an existing conda environment via:
+# $ conda install --file requirements.txt
 # platform: osx-64
 
 
