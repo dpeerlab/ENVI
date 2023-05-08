@@ -469,7 +469,7 @@ class ENVI:
         return self.encoder_layers[-1](Output)
 
     @tf.function
-    def decode_exp_nn(self, Input):
+    def decode_expression_nn(self, Input):
         """
         Expression decoder forward pass
 
@@ -540,7 +540,7 @@ class ENVI:
         return tf.split(self.encode_nn(x_confounder), num_or_size_splits=2, axis=1)
 
     @tf.function
-    def exp_decode(self, x, mode="sc"):
+    def expression_decode(self, x, mode="sc"):
         """
         Appends confounding variable to latent and generates an output distribution
 
@@ -563,7 +563,7 @@ class ENVI:
             ],
             axis=-1,
         )
-        decoder_output = self.decode_exp_nn(x_confounder)
+        decoder_output = self.decode_expression_nn(x_confounder)
 
         if getattr(self, mode + "_dist") == "zinb":
             output_r, output_p, output_d = self.decoder_expression_layers[-1](
@@ -683,7 +683,9 @@ class ENVI:
         z_sc = self.reparameterize(mean_sc, logstd_sc)
 
         if self.spatial_dist == "zinb":
-            spatial_r, spatial_p, spatial_d = self.exp_decode(z_spatial, mode="spatial")
+            spatial_r, spatial_p, spatial_d = self.expression_decode(
+                z_spatial, mode="spatial"
+            )
             spatial_like = tf.reduce_mean(
                 utils.log_zinb_pdf(
                     spatial_sample,
@@ -695,7 +697,7 @@ class ENVI:
                 axis=0,
             )
         if self.spatial_dist == "nb":
-            spatial_r, spatial_p = self.exp_decode(z_spatial, mode="spatial")
+            spatial_r, spatial_p = self.expression_decode(z_spatial, mode="spatial")
             spatial_like = tf.reduce_mean(
                 utils.log_nb_pdf(
                     spatial_sample,
@@ -706,7 +708,7 @@ class ENVI:
                 axis=0,
             )
         if self.spatial_dist == "pois":
-            spatial_l = self.exp_decode(z_spatial, mode="spatial")
+            spatial_l = self.expression_decode(z_spatial, mode="spatial")
             spatial_like = tf.reduce_mean(
                 utils.log_pos_pdf(
                     spatial_sample,
@@ -716,7 +718,9 @@ class ENVI:
                 axis=0,
             )
         if self.spatial_dist == "full_norm":
-            spatial_mu, spatial_logstd = self.exp_decode(z_spatial, mode="spatial")
+            spatial_mu, spatial_logstd = self.expression_decode(
+                z_spatial, mode="spatial"
+            )
             spatial_like = tf.reduce_mean(
                 utils.log_normal_pdf(
                     spatial_sample,
@@ -727,7 +731,7 @@ class ENVI:
                 axis=0,
             )
         if self.spatial_dist == "norm":
-            spatial_mu = self.exp_decode(z_spatial, mode="spatial")
+            spatial_mu = self.expression_decode(z_spatial, mode="spatial")
             spatial_like = tf.reduce_mean(
                 utils.log_normal_pdf(
                     spatial_sample,
@@ -739,27 +743,27 @@ class ENVI:
             )
 
         if self.sc_dist == "zinb":
-            sc_r, sc_p, sc_d = self.exp_decode(z_sc, mode="sc")
+            sc_r, sc_p, sc_d = self.expression_decode(z_sc, mode="sc")
             sc_like = tf.reduce_mean(
                 utils.log_zinb_pdf(sc_sample, sc_r, sc_p, sc_d, agg=self.agg_sc), axis=0
             )
         if self.sc_dist == "nb":
-            sc_r, sc_p = self.exp_decode(z_sc, mode="sc")
+            sc_r, sc_p = self.expression_decode(z_sc, mode="sc")
             sc_like = tf.reduce_mean(
                 utils.log_nb_pdf(sc_sample, sc_r, sc_p, agg=self.agg_sc), axis=0
             )
         if self.sc_dist == "pois":
-            sc_l = self.exp_decode(z_sc, mode="sc")
+            sc_l = self.expression_decode(z_sc, mode="sc")
             sc_like = tf.reduce_mean(
                 utils.log_pos_pdf(sc_sample, sc_l, agg=self.agg_sc), axis=0
             )
         if self.sc_dist == "full_norm":
-            sc_mu, sc_std = self.exp_decode(z_sc, mode="sc")
+            sc_mu, sc_std = self.expression_decode(z_sc, mode="sc")
             sc_like = tf.reduce_mean(
                 utils.log_normal_pdf(sc_sample, sc_mu, sc_std, agg=self.agg_sc), axis=0
             )
         if self.sc_dist == "norm":
-            sc_mu = self.exp_decode(z_sc, mode="sc")
+            sc_mu = self.expression_decode(z_sc, mode="sc")
             sc_like = tf.reduce_mean(
                 utils.log_normal_pdf(
                     sc_sample, sc_mu, tf.zeros_like(sc_sample), agg=self.agg_sc
@@ -1025,7 +1029,7 @@ class ENVI:
             decode = np.concatenate(
                 [
                     self.GetMeanSample(
-                        self.exp_decode(
+                        self.expression_decode(
                             np.array_split(
                                 self.spatial_data.obsm["envi_latent"], NumDiv, axis=0
                             )[_],
@@ -1060,7 +1064,7 @@ class ENVI:
             decode = np.concatenate(
                 [
                     self.GetMeanSample(
-                        self.exp_decode(
+                        self.expression_decode(
                             np.array_split(latent, NumDiv, axis=0)[_], mode="sc"
                         ),
                         mode="sc",
