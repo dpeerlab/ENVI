@@ -800,7 +800,7 @@ class ENVI:
             )
         elif self.prior_dist == "log_norm":
             kl_spatial = tf.reduce_mean(
-                utils.LogNormalKL(logstd_spatial, utils.logstd, agg=self.agg), axis=0
+                utils.LogNormalKL(mean_spatial, logstd_spatial, agg=self.agg), axis=0
             )
             kl_sc = tf.reduce_mean(
                 utils.LogNormalKL(mean_sc, logstd_sc, agg=self.agg), axis=0
