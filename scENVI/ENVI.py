@@ -238,7 +238,7 @@ class ENVI:
             ]
 
             if self.lib_size:
-                if type(self.lib_size) == type(True):
+                if isinstance(self.lib_size, bool):
                     sc.pp.normalize_total(
                         self.sc_data,
                         target_sum=np.median(self.sc_data.X.sum(axis=1)),
