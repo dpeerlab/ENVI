@@ -36,8 +36,10 @@ class ConstantLayer(tf.keras.layers.Layer):
         units (int): number of neurons in the layer
         input_dim (int): dimension of input to layer
         bias_init (keras initializer): initializer of neural biases
-        comm_disp (bool): if True, spatial_dist and sc_dist share dispersion parameter(s)
-        const_disp (bool): if True, dispertion parameter(s) are only per gene, rather there per gene per sample
+        comm_disp (bool): if True, spatial_dist and sc_dist share dispersion
+            parameter(s)
+        const_disp (bool): if True, dispertion parameter(s) are only per gene,
+            rather there per gene per sample
     """
 
     def __init__(self, units, input_dim, bias_init, name):
@@ -59,8 +61,10 @@ class ENVIOutputLayer(tf.keras.layers.Layer):
         input_dim (int): dimension of input to layer
         kernel_init (keras initializer): initializer for neural weights
         bias_init (keras initializer): initializer of neural biases
-        spatial_dist (str): distribution used to describe spatial data (default pois, could be 'pois', 'nb', 'zinb', 'norm' or 'full_norm')
-        sc_dist (str): distribution used to describe sinlge cell data (default nb, could be 'pois', 'nb', 'zinb', 'norm' or 'full_norm')
+        spatial_dist (str): distribution used to describe spatial data
+            (default pois, could be 'pois', 'nb', 'zinb', 'norm' or 'full_norm')
+        sc_dist (str): distribution used to describe sinlge cell data
+            (default nb, could be 'pois', 'nb', 'zinb', 'norm' or 'full_norm')
     """
 
     def __init__(

@@ -48,7 +48,7 @@ def BatchKNN(data, batch, k):
         k (int): number of neighbours for kNN matrix
     Return:
         kNNGraphIndex (np.array): for each sample, the index of its k nearest-neighbours
-        WeightedIndex (np.array): Weighted (softmax) distance to each  nearest-neighbours
+        WeightedIndex (np.array): Weighted (softmax) distance to each nearest-neighbours
     """
 
     kNNGraphIndex = np.zeros(shape=(data.shape[0], k))
@@ -78,11 +78,14 @@ def GetNeighExp(spatial_data, kNN, spatial_key="spatial", batch_key=-1, data_key
     Computing Niche mean expression based on cell expression and location
 
     Args:
-        spatial_data (anndata): anndata with spatial data, with obsm 'spatial' indicating spatial location of spot/segmented cell
+        spatial_data (anndata): anndata with spatial data, with obsm 'spatial'
+            indicating spatial location of spot/segmented cell
         kNN (int): number of nearest neighbours to define niche
-        spatial_key (str): obsm key name with physical location of spots/cells (default 'spatial')
+        spatial_key (str): obsm key name with physical location of spots/cells
+            (default 'spatial')
         batch_key (str): obs key name of batch/sample of spatial data (default -1)
-        data_key (str): obsm key to compute niche mean across (defualt None, uses gene expression .X)
+        data_key (str): obsm key to compute niche mean across
+            (defualt None, uses gene expression .X)
 
     Return:
         NeighExp: Average geene expression in niche
@@ -126,9 +129,11 @@ def GetCOVET(
     Wrapper to compute niche covariance based on cell expression and location
 
     Args:
-        spatial_data (anndata): anndata with spatial data, with obsm 'spatial' indicating spatial location of spot/segmented cell
+        spatial_data (anndata): anndata with spatial data, with obsm 'spatial'
+            indicating spatial location of spot/segmented cell
         kNN (int): number of nearest neighbours to define niche
-        spatial_key (str): obsm key name with physical location of spots/cells (default 'spatial')
+        spatial_key (str): obsm key name with physical location of spots/cells
+            (default 'spatial')
         batch_key (str): obs key name of batch/sample of spatial data (default -1)
         MeanExp (np.array): expression vector to shift niche covariance with
         weighted (bool): if True, weights covariance by spatial distance
@@ -198,7 +203,8 @@ def GetCov(
     Compte niche covariance matrices for spatial data
 
     Args:
-        spatial_data (anndata): anndata with spatial data, with obsm 'spatial' indicating spatial location of spot/segmented cell
+        spatial_data (anndata): anndata with spatial data, with obsm 'spatial'
+            indicating spatial location of spot/segmented cell
         k (int): number of nearest neighbours to define niche
         g (int): number of HVG to compute niche covariance matricies
         genes (list of str): list of genes to keep for niche covariance
