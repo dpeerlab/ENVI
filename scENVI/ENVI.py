@@ -14,7 +14,7 @@ from scENVI import output_layer
 
 def COVET(data, k=8, g=64, genes=[], spatial_key="spatial", batch_key=-1, cov_pc=1):
     """
-    Compte niche covariance matrices for spatial data
+    Compute niche covariance matrices for spatial data
 
     Args:
         spatial_data (anndata): anndata with spatial data, with obsm 'spatial'

@@ -200,7 +200,7 @@ def GetCov(
     spatial_data, k, g, genes, cov_dist, spatial_key="spatial", batch_key=-1, cov_pc=1
 ):
     """
-    Compte niche covariance matrices for spatial data
+    Compute niche covariance matrices for spatial data
 
     Args:
         spatial_data (anndata): anndata with spatial data, with obsm 'spatial'
