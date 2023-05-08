@@ -63,7 +63,7 @@ class ENVIOutputLayer(tf.keras.layers.Layer):
         bias_init (keras initializer): initializer of neural biases
         spatial_dist (str): distribution used to describe spatial data
             (default pois, could be 'pois', 'nb', 'zinb', 'norm' or 'full_norm')
-        sc_dist (str): distribution used to describe sinlge cell data
+        sc_dist (str): distribution used to describe single cell data
             (default nb, could be 'pois', 'nb', 'zinb', 'norm' or 'full_norm')
     """
 

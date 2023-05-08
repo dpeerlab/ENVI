@@ -22,12 +22,12 @@ class HiddenPrints:
 
 def MatSqrtTF(Mats):
     """
-    Computes psuedo matrix square root with tensorfow linear algebra on cpu
+    Computes pseudo matrix square root with tensorflow linear algebra on cpu
 
     Args:
         Mats (array): Matrices to compute square root of
     Return:
-        SqrtMats (np.array): psuedo matrix square of Mats
+        SqrtMats (np.array): pseudo matrix square of Mats
     """
     with tf.device("/CPU:0"):
         e, v = tf.linalg.eigh(Mats)
@@ -40,15 +40,15 @@ def MatSqrtTF(Mats):
 
 def BatchKNN(data, batch, k):
     """
-    Computes kNN matrix for spatial data from multiple batchjes
+    Computes kNN matrix for spatial data from multiple batches
 
     Args:
         data (array): Data to compute kNN on
         batch (array): Batch allocation per sample in Data
-        k (int): number of neighbours for kNN matrix
+        k (int): number of neighbors for kNN matrix
     Return:
-        kNNGraphIndex (np.array): for each sample, the index of its k nearest-neighbours
-        WeightedIndex (np.array): Weighted (softmax) distance to each nearest-neighbours
+        kNNGraphIndex (np.array): for each sample, the index of its k nearest-neighbors
+        WeightedIndex (np.array): Weighted (softmax) distance to each nearest-neighbors
     """
 
     kNNGraphIndex = np.zeros(shape=(data.shape[0], k))
@@ -80,16 +80,16 @@ def GetNeighExp(spatial_data, kNN, spatial_key="spatial", batch_key=-1, data_key
     Args:
         spatial_data (anndata): anndata with spatial data, with obsm 'spatial'
             indicating spatial location of spot/segmented cell
-        kNN (int): number of nearest neighbours to define niche
+        kNN (int): number of nearest neighbors to define niche
         spatial_key (str): obsm key name with physical location of spots/cells
             (default 'spatial')
         batch_key (str): obs key name of batch/sample of spatial data (default -1)
         data_key (str): obsm key to compute niche mean across
-            (defualt None, uses gene expression .X)
+            (default None, uses gene expression .X)
 
     Return:
-        NeighExp: Average geene expression in niche
-        kNNGraphIndex: indices of nearest spatial neighbours per cell
+        NeighExp: Average gene expression in niche
+        kNNGraphIndex: indices of nearest spatial neighbors per cell
     """
 
     if data_key is None:
@@ -131,7 +131,7 @@ def GetCOVET(
     Args:
         spatial_data (anndata): anndata with spatial data, with obsm 'spatial'
             indicating spatial location of spot/segmented cell
-        kNN (int): number of nearest neighbours to define niche
+        kNN (int): number of nearest neighbors to define niche
         spatial_key (str): obsm key name with physical location of spots/cells
             (default 'spatial')
         batch_key (str): obs key name of batch/sample of spatial data (default -1)
@@ -139,7 +139,7 @@ def GetCOVET(
         weighted (bool): if True, weights covariance by spatial distance
     Return:
         COVET: niche covariance matrices
-        kNNGraphIndex: indices of nearest spatial neighbours per cell
+        kNNGraphIndex: indices of nearest spatial neighbors per cell
     """
     ExpData = spatial_data[:, spatial_data.var.highly_variable].X
 
@@ -205,16 +205,16 @@ def GetCov(
     Args:
         spatial_data (anndata): anndata with spatial data, with obsm 'spatial'
             indicating spatial location of spot/segmented cell
-        k (int): number of nearest neighbours to define niche
-        g (int): number of HVG to compute niche covariance matricies
+        k (int): number of nearest neighbors to define niche
+        g (int): number of HVG to compute niche covariance matrices
         genes (list of str): list of genes to keep for niche covariance
         cov_dist (str): distribution to transform niche covariance matrices to fit into
-        batch_key (str): obs key for batch informationm (default -1, for no batch)
+        batch_key (str): obs key for batch information (default -1, for no batch)
 
     Return:
         COVET: raw, untransformed niche covariance matrices
         COVET_SQRT: covariance matrices transformed into chosen cov_dist
-        NeighExp: Average geene expression in niche
+        NeighExp: Average gene expression in niche
         CovGenes: Genes used for niche covariance
     """
 

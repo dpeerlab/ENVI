@@ -19,18 +19,18 @@ def COVET(data, k=8, g=64, genes=[], spatial_key="spatial", batch_key=-1, cov_pc
     Args:
         spatial_data (anndata): anndata with spatial data, with obsm 'spatial'
             indicating spatial location of spot/segmented cell
-        k (int): number of nearest neighbours to define niche
-        g (int): number of HVG to compute niche covariance matricies
+        k (int): number of nearest neighbors to define niche
+        g (int): number of HVG to compute niche covariance matrices
         genes (list of str): list of genes to keep for niche covariance
             (if empty, just uses HVG)
-        batch_key (str): obs key for batch informationm (default -1, for no batch)
-        cov_pc (float): log psuedo-count for COVET computation
+        batch_key (str): obs key for batch information (default -1, for no batch)
+        cov_pc (float): log pseudo-count for COVET computation
             (if 0, use unlogged values)
 
     Return:
         COVET: raw, untransformed niche covariance matrices
         COVET_SQRT: covariance matrices transformed into chosen cov_dist
-        NeighExp: Average geene expression in niche
+        NeighExp: Average gene expression in niche
         CovGenes: Genes used for niche covariance
     """
 
@@ -60,35 +60,35 @@ class ENVI:
     Parameters:
         spatial_data (anndata): anndata with spatial data, with obsm 'spatial'
             indicating spatial location of spot/segmented cell
-        sc_data (anndata): anndata with sinlge cell data
+        sc_data (anndata): anndata with single cell data
         spatial_key (str): obsm key name with physical location of spots/cells
             (default 'spatial')
         batch_key (str): obs key name of batch/sample of spatial data
             (default 'batch' if exists on .obs, set -1 to ignore)
         num_layers (int): number of neural network for decoders and encoders (default 3)
         num_neurons (int): number of neurons in each layer (default 1024)
-        latent_dim (int): size of ENVI latent dimention (size 512)
-        k_nearest (int): number of physical neighbours to describe niche (default 8)
+        latent_dim (int): size of ENVI latent dimension (size 512)
+        k_nearest (int): number of physical neighbors to describe niche (default 8)
         num_cov_genes (int): number of HVGs to compute niche covariance
             with default (64), if -1 takes all genes
         cov_genes (list of str): manual genes to compute niche with (default [])
-        num_HVG (int): number of HVGs to keep for sinlge cell data (default 2048),
+        num_HVG (int): number of HVGs to keep for single cell data (default 2048),
             if -1 takes all genes
-        sc_genes (list of str): manual genes to keep for sinlge cell data (default [])
+        sc_genes (list of str): manual genes to keep for single cell data (default [])
         spatial_dist (str): distribution used to describe spatial data
             (default pois, could be 'pois', 'nb', 'zinb', 'norm' or 'full_norm')
-        sc_dist (str): distribution used to describe sinlge cell data
+        sc_dist (str): distribution used to describe single cell data
             (default nb, could be 'pois', 'nb', 'zinb', 'norm' or 'full_norm')
         cov_dist (str): distribution used to describe niche covariance from spatial data
             (default OT, could be 'OT', 'wish' or 'norm')
         prior_dist (str): prior distribution for latent (default normal)
         comm_disp (bool): if True, spatial_dist and sc_dist share dispersion
             parameter(s) (default False)
-        const_disp (bool): if True, dispertion parameter(s) are only per gene
+        const_disp (bool): if True, dispersion parameter(s) are only per gene
             rather there per gene per sample (default False)
         spatial_coeff (float): coefficient for spatial expression loss in total ELBO
             (default 1.0)
-        sc_coeff (float): coefficient for sinlge cell expression loss in total ELBO
+        sc_coeff (float): coefficient for single cell expression loss in total ELBO
             (default 1.0)
         cov_coeff (float): coefficient for spatial niche loss in total ELBO
             (default 1.0)
@@ -106,7 +106,7 @@ class ENVI:
             if number, normalize library size to it
             if False does nothing (default False)
         z_score (float): if True and spatial/sc_dist are 'norm' or 'full_norm',
-            spatial and sinlge cell data are z-scored (default False)
+            spatial and single cell data are z-scored (default False)
         agg (str or np.array): aggregation function of loss factors,
                                'mean' will average across neurons,
                                'sum' will sum across neurons (makes a difference because
@@ -516,7 +516,7 @@ class ENVI:
 
         Args:
             x (array): input to encoder (size of #genes in spatial data)
-            mode (str): 'sc' for sinlge cell, 'spatial' for spatial data
+            mode (str): 'sc' for single cell, 'spatial' for spatial data
 
         Return:
             mean (array): mean parameter for latent variable
@@ -546,7 +546,7 @@ class ENVI:
 
         Args:
             x (array): input to expression decoder (size of latent dimension)
-            mode (str): 'sc' for sinlge cell, 'spatial' for spatial data
+            mode (str): 'sc' for single cell, 'spatial' for spatial data
 
         Return:
             Output paramterizations for chosen expression distributions
@@ -664,7 +664,7 @@ class ENVI:
         Return:
             spatial_like: ENVI liklihood for spatial expression
             cov_like: ENVI liklihood for covariance data
-            sc_like: ENVI liklihood for sinlge cell data
+            sc_like: ENVI liklihood for single cell data
             kl: KL divergence between posterior latent and prior
         """
 
@@ -970,7 +970,7 @@ class ENVI:
                 (default 'sc', i.e. transfer from spatial_data to single cell data)
             key_name (str): obsm key name for labeling (default 'cell_type')
             ClassificationModel (sklearn model): Classification model to
-                learn cell labelings (defualt sklearn.neural_network.MLPClassifier)
+                learn cell labelings (default sklearn.neural_network.MLPClassifier)
         Return:
             no return, adds key_name with cell labelings to ENVI.spatial_data.obsm or
             ENVI.spatial_data.obsm, depending on pred_on
@@ -985,7 +985,7 @@ class ENVI:
             )
             self.spatial_data.obs[key_name + "_envi"] = self.spatial_data.obs[key_name]
             print(
-                "Finished Transfering labels to single cell data! See "
+                "Finished transferring labels to single cell data! See "
                 + key_name
                 + "_envi in obsm of ENVI.sc_data"
             )
@@ -998,14 +998,14 @@ class ENVI:
             )
             self.sc_data.obs[key_name + "_envi"] = self.sc_data.obs[key_name]
             print(
-                "Finished Transfering labels to spatial data! See "
+                "Finished transferring labels to spatial data! See "
                 + key_name
                 + "_envi in obsm of ENVI.spatial_data"
             )
 
     def impute(self, NumDiv=16, return_raw=True, data=None):
         """
-        Imput full transcriptome for spatial data
+        Input full transcriptome for spatial data
 
         Args:
             NumDiv (int): number of splits for forward pass to allow to fit in gpu
@@ -1191,13 +1191,13 @@ class ENVI:
         Infer niche composition for single cell data
 
         Args:
-            k (float): k for kNN regression on covariance matrices (defulat 32)
-            niche_key (str): spaital obsm key to reconstruct niche from
+            k (float): k for kNN regression on covariance matrices (default 32)
+            niche_key (str): spatial obsm key to reconstruct niche from
                 (default 'cell_type')
             pred_key (str): spatial & single cell obsm key to split up kNN regression by
                 (default None)
             gpu (bool): if True, uses gpu for kNN regression (default False)
-            norm_reg (bool): if True, cell type enrichement in normalized by the number
+            norm_reg (bool): if True, cell type enrichment in normalized by the number
                 of cells per type (default False)
             cluster (bool): if True, clusters covariance data and produces niche based
                 on average across cluster, k is parameter for phenograph (default False)
@@ -1512,7 +1512,7 @@ class ENVI:
         Return:
             spatial_like: ENVI liklihood for spatial expression
             cov_like: ENVI liklihood for covariance data
-            sc_like: ENVI liklihood for sinlge cell data
+            sc_like: ENVI liklihood for single cell data
             kl: KL divergence between posterior latent and prior
             nan: True if any factor in loss was nan and doesn't apply gradients
         """
