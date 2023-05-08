@@ -3,7 +3,7 @@ import tensorflow as tf
 
 class LinearLayer(tf.keras.layers.Layer):
     """
-    Costume keras linear layer
+    Custom keras linear layer
 
     Args:
         units (int): number of neurons in the layer
@@ -30,7 +30,7 @@ class LinearLayer(tf.keras.layers.Layer):
 
 class ConstantLayer(tf.keras.layers.Layer):
     """
-    Costume keras constant layer, biases only
+    Custom keras constant layer, biases only
 
     Args:
         units (int): number of neurons in the layer
@@ -54,7 +54,7 @@ class ConstantLayer(tf.keras.layers.Layer):
 
 class ENVIOutputLayer(tf.keras.layers.Layer):
     """
-    Costume keras layer for ENVI expression decoder output
+    Custom keras layer for ENVI expression decoder output
 
     Args:
         units (int): number of neurons in the layer
