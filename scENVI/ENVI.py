@@ -8,8 +8,8 @@ import sklearn.neural_network
 import pandas as pd
 import pickle
 
-from scENVI.utils import *
-from scENVI.output_layer import *
+from scENVI import utils
+from scENVI import output_layer
 
 
 def COVET(data, k=8, g=64, genes=[], spatial_key="spatial", batch_key=-1, cov_pc=1):
@@ -31,7 +31,7 @@ def COVET(data, k=8, g=64, genes=[], spatial_key="spatial", batch_key=-1, cov_pc
         CovGenes: Genes used for niche covariance
     """
 
-    COVET, COVET_SQRT, _, CovGenes = GetCov(
+    COVET, COVET_SQRT, _, CovGenes = utils.GetCov(
         data,
         k,
         g,
@@ -237,7 +237,7 @@ class ENVI:
                 self.spatial_data.obsm["COVET_SQRT"],
                 self.spatial_data.obsm["NicheMat"],
                 self.CovGenes,
-            ) = GetCov(
+            ) = utils.GetCov(
                 self.spatial_data,
                 self.k_nearest,
                 self.num_cov_genes,
@@ -379,7 +379,7 @@ class ENVI:
             )
 
             self.dec_exp_layers.append(
-                ENVIOutputLayer(
+                output_layer.ENVIOutputLayer(
                     input_dim=self.num_neurons,
                     units=self.full_trans_gene_num,
                     spatial_dist=self.spatial_dist,
@@ -644,7 +644,7 @@ class ENVI:
         if self.spatial_dist == "zinb":
             spatial_r, spatial_p, spatial_d = self.exp_decode(z_spatial, mode="spatial")
             spatial_like = tf.reduce_mean(
-                log_zinb_pdf(
+                utils.log_zinb_pdf(
                     spatial_sample,
                     spatial_r[:, : spatial_sample.shape[-1]],
                     spatial_p[:, : spatial_sample.shape[-1]],
@@ -656,7 +656,7 @@ class ENVI:
         if self.spatial_dist == "nb":
             spatial_r, spatial_p = self.exp_decode(z_spatial, mode="spatial")
             spatial_like = tf.reduce_mean(
-                log_nb_pdf(
+                utils.log_nb_pdf(
                     spatial_sample,
                     spatial_r[:, : spatial_sample.shape[-1]],
                     spatial_p[:, : spatial_sample.shape[-1]],
@@ -667,7 +667,7 @@ class ENVI:
         if self.spatial_dist == "pois":
             spatial_l = self.exp_decode(z_spatial, mode="spatial")
             spatial_like = tf.reduce_mean(
-                log_pos_pdf(
+                utils.log_pos_pdf(
                     spatial_sample,
                     spatial_l[:, : spatial_sample.shape[-1]],
                     agg=self.agg_spatial,
@@ -677,7 +677,7 @@ class ENVI:
         if self.spatial_dist == "full_norm":
             spatial_mu, spatial_logstd = self.exp_decode(z_spatial, mode="spatial")
             spatial_like = tf.reduce_mean(
-                log_normal_pdf(
+                utils.log_normal_pdf(
                     spatial_sample,
                     spatial_mu[:, : spatial_sample.shape[-1]],
                     spatial_logstd[:, : spatial_sample.shape[-1]],
@@ -688,7 +688,7 @@ class ENVI:
         if self.spatial_dist == "norm":
             spatial_mu = self.exp_decode(z_spatial, mode="spatial")
             spatial_like = tf.reduce_mean(
-                log_normal_pdf(
+                utils.log_normal_pdf(
                     spatial_sample,
                     spatial_mu[:, : spatial_sample.shape[-1]],
                     tf.zeros_like(spatial_sample),
@@ -700,27 +700,27 @@ class ENVI:
         if self.sc_dist == "zinb":
             sc_r, sc_p, sc_d = self.exp_decode(z_sc, mode="sc")
             sc_like = tf.reduce_mean(
-                log_zinb_pdf(sc_sample, sc_r, sc_p, sc_d, agg=self.agg_sc), axis=0
+                utils.log_zinb_pdf(sc_sample, sc_r, sc_p, sc_d, agg=self.agg_sc), axis=0
             )
         if self.sc_dist == "nb":
             sc_r, sc_p = self.exp_decode(z_sc, mode="sc")
             sc_like = tf.reduce_mean(
-                log_nb_pdf(sc_sample, sc_r, sc_p, agg=self.agg_sc), axis=0
+                utils.log_nb_pdf(sc_sample, sc_r, sc_p, agg=self.agg_sc), axis=0
             )
         if self.sc_dist == "pois":
             sc_l = self.exp_decode(z_sc, mode="sc")
             sc_like = tf.reduce_mean(
-                log_pos_pdf(sc_sample, sc_l, agg=self.agg_sc), axis=0
+                utils.log_pos_pdf(sc_sample, sc_l, agg=self.agg_sc), axis=0
             )
         if self.sc_dist == "full_norm":
             sc_mu, sc_std = self.exp_decode(z_sc, mode="sc")
             sc_like = tf.reduce_mean(
-                log_normal_pdf(sc_sample, sc_mu, sc_std, agg=self.agg_sc), axis=0
+                utils.log_normal_pdf(sc_sample, sc_mu, sc_std, agg=self.agg_sc), axis=0
             )
         if self.sc_dist == "norm":
             sc_mu = self.exp_decode(z_sc, mode="sc")
             sc_like = tf.reduce_mean(
-                log_normal_pdf(
+                utils.log_normal_pdf(
                     sc_sample, sc_mu, tf.zeros_like(sc_sample), agg=self.agg_sc
                 ),
                 axis=0,
@@ -729,14 +729,14 @@ class ENVI:
         if self.cov_dist == "wish":
             cov_mu = self.cov_decode(z_spatial)
             cov_like = tf.reduce_mean(
-                log_wish_pdf(cov_sample, cov_mu, agg=self.agg), axis=0
+                utils.log_wish_pdf(cov_sample, cov_mu, agg=self.agg), axis=0
             )
         elif self.cov_dist == "norm":
             cov_mu = tf.reshape(
                 self.cov_decode(z_spatial), [spatial_sample.shape[0], -1]
             )
             cov_like = tf.reduce_mean(
-                log_normal_pdf(
+                utils.log_normal_pdf(
                     tf.reshape(cov_sample, [cov_sample.shape[0], -1]),
                     cov_mu,
                     tf.zeros_like(cov_mu),
@@ -747,20 +747,22 @@ class ENVI:
         elif self.cov_dist == "OT":
             cov_mu = self.cov_decode(z_spatial)
             cov_like = tf.reduce_mean(
-                OTDistance(cov_sample, cov_mu, agg=self.agg), axis=0
+                utils.OTDistance(cov_sample, cov_mu, agg=self.agg), axis=0
             )
 
         if self.prior_dist == "norm":
             kl_spatial = tf.reduce_mean(
-                NormalKL(mean_spatial, logstd_spatial, agg=self.agg), axis=0
-            )
-            kl_sc = tf.reduce_mean(NormalKL(mean_sc, logstd_sc, agg=self.agg), axis=0)
-        elif self.prior_dist == "log_norm":
-            kl_spatial = tf.reduce_mean(
-                LogNormalKL(logstd_spatial, logstd, agg=self.agg), axis=0
+                utils.NormalKL(mean_spatial, logstd_spatial, agg=self.agg), axis=0
             )
             kl_sc = tf.reduce_mean(
-                LogNormalKL(mean_sc, logstd_sc, agg=self.agg), axis=0
+                utils.NormalKL(mean_sc, logstd_sc, agg=self.agg), axis=0
+            )
+        elif self.prior_dist == "log_norm":
+            kl_spatial = tf.reduce_mean(
+                utils.LogNormalKL(logstd_spatial, utils.logstd, agg=self.agg), axis=0
+            )
+            kl_sc = tf.reduce_mean(
+                utils.LogNormalKL(mean_sc, logstd_sc, agg=self.agg), axis=0
             )
 
         kl = 0.5 * kl_spatial + 0.5 * kl_sc
@@ -1168,7 +1170,7 @@ class ENVI:
         self.spatial_data.obsm[niche_key + "_enc"] = spatialCellTypeEncoding
         CellTypeName = LabelEnc.classes_
 
-        NeighCellType = GetNeighExp(
+        NeighCellType = utils.GetNeighExp(
             self.spatial_data,
             self.k_nearest,
             data_key=(niche_key + "_enc"),
@@ -1203,7 +1205,7 @@ class ENVI:
                     )
 
                 if cluster:
-                    with HiddenPrints():
+                    with utils.HiddenPrints():
                         phenoclusters = phenograph.cluster(
                             np.concatenate(
                                 (
@@ -1274,7 +1276,7 @@ class ENVI:
                         )
 
                     if cluster:
-                        with HiddenPrints():
+                        with utils.HiddenPrints():
                             phenoclusters = phenograph.cluster(
                                 np.concatenate(
                                     (
@@ -1334,7 +1336,7 @@ class ENVI:
                     )
 
                 if cluster:
-                    with HiddenPrints():
+                    with utils.HiddenPrints():
                         phenoclusters = phenograph.cluster(
                             np.concatenate(
                                 (
@@ -1401,7 +1403,7 @@ class ENVI:
                         )
 
                     if cluster:
-                        with HiddenPrints():
+                        with utils.HiddenPrints():
                             phenoclusters = phenograph.cluster(
                                 np.concatenate(
                                     (
@@ -1532,7 +1534,7 @@ class ENVI:
         sc_data_train = self.sc_data.X.astype(tf.keras.backend.floatx())
 
         ## Run Dummy:
-        log_pos_pdf(tf.ones([5], tf.float32), tf.ones([5], tf.float32))
+        utils.log_pos_pdf(tf.ones([5], tf.float32), tf.ones([5], tf.float32))
 
         time.time()
 
