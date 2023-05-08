@@ -660,7 +660,7 @@ class ENVI:
     @tf.function
     def compute_loss(self, spatial_sample, cov_sample, sc_sample):
         """
-        Computes ENVI liklihoods
+        Computes ENVI likelihoods
 
         Args:
             spatial_sample (np.array or tf.tensor): spatial expression data sample/batch
@@ -668,9 +668,9 @@ class ENVI:
             sc_sample (np.array or tf.tensor): single cell data sample/batch subsetted
                 to spatial genes
         Return:
-            spatial_like: ENVI liklihood for spatial expression
-            cov_like: ENVI liklihood for covariance data
-            sc_like: ENVI liklihood for single cell data
+            spatial_like: ENVI likelihood for spatial expression
+            cov_like: ENVI likelihood for covariance data
+            sc_like: ENVI likelihood for single cell data
             kl: KL divergence between posterior latent and prior
         """
 
@@ -812,10 +812,10 @@ class ENVI:
 
     def GetCovMean(self, cov_mat):
         """
-        Reconstructs true covarianace (untransformed)
+        Reconstructs true covariance (untransformed)
 
         Args:
-            cov_mat (array/tensor): transformed covariance matricies to untransform
+            cov_mat (array/tensor): transformed covariance matrices to untransform
         Return:
             untransform covariance matrices
         """
@@ -1516,9 +1516,9 @@ class ENVI:
             sc_sample (np.array or tf.tensor): single cell data sample/batch subsetted
                 to spatial genes
         Return:
-            spatial_like: ENVI liklihood for spatial expression
-            cov_like: ENVI liklihood for covariance data
-            sc_like: ENVI liklihood for single cell data
+            spatial_like: ENVI likelihood for spatial expression
+            cov_like: ENVI likelihood for covariance data
+            sc_like: ENVI likelihood for single cell data
             kl: KL divergence between posterior latent and prior
             nan: True if any factor in loss was nan and doesn't apply gradients
         """
