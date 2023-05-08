@@ -6,10 +6,10 @@ class LinearLayer(tf.keras.layers.Layer):
     Custom keras linear layer
 
     Args:
-        units (int): number of neurons in the layer
-        input_dim (int): dimension of input to layer
-        kernel_init (keras initializer): initializer for neural weights
-        bias_init (keras initializer): initializer of neural biases
+        units (int): layer output dimension
+        input_dim (int): layer input dimension
+        kernel_init (keras initializer): initializer for layer weights
+        bias_init (keras initializer): initializer of layer biases
     """
 
     def __init__(self, units, input_dim, kernel_init, bias_init, name):
@@ -30,16 +30,16 @@ class LinearLayer(tf.keras.layers.Layer):
 
 class ConstantLayer(tf.keras.layers.Layer):
     """
-    Custom keras constant layer, biases only
+    Custom keras constant layer with biases only
 
     Args:
         units (int): number of neurons in the layer
-        input_dim (int): dimension of input to layer
-        bias_init (keras initializer): initializer of neural biases
-        comm_disp (bool): if True, spatial_dist and sc_dist share dispersion
-            parameter(s)
-        const_disp (bool): if True, dispertion parameter(s) are only per gene,
-            rather there per gene per sample
+        input_dim (int): layer input dimension
+        bias_init (keras initializer): initializer of layer biases
+        comm_disp (bool): whether the spatial and single cell distributions share
+            dispersion parameters
+        const_disp (bool): whether dispersion parameters are inferred per gene
+            instead of per (gene, sample) pair
     """
 
     def __init__(self, units, input_dim, bias_init, name):
@@ -56,14 +56,19 @@ class ENVIOutputLayer(tf.keras.layers.Layer):
     """
     Custom keras layer for ENVI expression decoder output
 
+    Predicts the parameters of the spatial and single cell distributions.
+    For poisson distributions, predicts the rate.
+    For negative binomial and normal distributions, predicts the rate and dispersion.
+    For zero-inflated distributions, predicts the rate, dispersion and zero-inflation.
+
     Args:
-        units (int): number of neurons in the layer
-        input_dim (int): dimension of input to layer
-        kernel_init (keras initializer): initializer for neural weights
-        bias_init (keras initializer): initializer of neural biases
-        spatial_dist (str): distribution used to describe spatial data
+        units (int): layer output dimension
+        input_dim (int): layer input dimension
+        kernel_init (keras initializer): initializer for layer weights
+        bias_init (keras initializer): initializer of layer biases
+        spatial_dist (str): variational distribution for spatial data
             (default pois, could be 'pois', 'nb', 'zinb', 'norm' or 'full_norm')
-        sc_dist (str): distribution used to describe single cell data
+        sc_dist (str): variational distribution for single cell data
             (default nb, could be 'pois', 'nb', 'zinb', 'norm' or 'full_norm')
     """
 
@@ -83,229 +88,47 @@ class ENVIOutputLayer(tf.keras.layers.Layer):
 
         self.input_dim = input_dim
         self.units = units
-
         self.spatial_dist = spatial_dist
         self.sc_dist = sc_dist
         self.comm_disp = comm_disp
         self.const_disp = const_disp
-
+        self.name = name
         self.kernel_init = kernel_init
         self.bias_init = bias_init
 
+        # Variational distribution parameters
         self.r = LinearLayer(units, input_dim, kernel_init, bias_init, name=name + "_r")
+        self.init_dispersion_layers()
 
-        if self.comm_disp:
-            if self.spatial_dist == "zinb":
-                self.p_spatial = (
-                    ConstantLayer(units, input_dim, bias_init, name=name + "_p_spatial")
-                    if self.const_disp
-                    else LinearLayer(
-                        units,
-                        input_dim,
-                        kernel_init,
-                        bias_init,
-                        name=name + "_p_spatial",
-                    )
-                )
+    def init_dispersion_layers(self):
+        p_dists = ["zinb", "nb", "full_norm"]
+        d_dists = ["zinb"]
 
-                self.d_spatial = (
-                    ConstantLayer(units, input_dim, bias_init + "_d_spatial")
-                    if self.const_disp
-                    else LinearLayer(
-                        units,
-                        input_dim,
-                        kernel_init,
-                        bias_init,
-                        name=name + "_d_spatial",
-                    )
-                )
+        if self.spatial_dist in p_dists:
+            self.p_spatial = self.init_layer(name="_p_spatial")
+            self.p_sc = self.p_spatial
+        if self.spatial_dist in d_dists:
+            self.d_spatial = self.init_layer(name="_d_spatial")
+            self.d_sc = self.d_spatial
 
-            elif self.spatial_dist == "nb" or self.spatial_dist == "full_norm":
-                self.p_spatial = (
-                    ConstantLayer(units, input_dim, bias_init, name=name + "_p_spatial")
-                    if self.const_disp
-                    else LinearLayer(
-                        units,
-                        input_dim,
-                        kernel_init,
-                        bias_init,
-                        name=name + "_p_spatial",
-                    )
-                )
+        if not self.comm_disp:
+            if self.sc_dist in p_dists:
+                self.p_sc = self.init_layer(name="_p_sc")
+            if self.sc_dist in d_dists:
+                self.d_sc = self.init_layer(name="_d_sc")
 
-            if self.sc_dist == "zinb":
-                self.p_sc = (
-                    self.p_spatial
-                    if (
-                        self.spatial_dist == "zinb"
-                        or self.spatial_dist == "nb"
-                        or self.spatial_dist == "full_norm"
-                    )
-                    else (
-                        ConstantLayer(units, input_dim, bias_init, name=name + "_p_sc")
-                        if self.const_disp
-                        else LinearLayer(
-                            units,
-                            input_dim,
-                            kernel_init,
-                            bias_init,
-                            name=name + "_p_sc",
-                        )
-                    )
-                )
-
-                self.d_sc = (
-                    self.d_spatial
-                    if (self.spatial_dist == "zinb")
-                    else (
-                        ConstantLayer(units, input_dim, bias_init, name=name + "_d_sc")
-                        if self.const_disp
-                        else LinearLayer(
-                            units,
-                            input_dim,
-                            kernel_init,
-                            bias_init,
-                            name=name + "_d_sc",
-                        )
-                    )
-                )
-
-            elif self.sc_dist == "nb" or self.sc_dist == "full_norm":
-                self.p_sc = (
-                    self.p_spatial
-                    if (
-                        self.spatial_dist == "zinb"
-                        or self.spatial_dist == "nb"
-                        or self.spatial_dist == "full_norm"
-                    )
-                    else (
-                        ConstantLayer(units, input_dim, bias_init, name=name + "_p_sc")
-                        if self.const_disp
-                        else LinearLayer(
-                            units,
-                            input_dim,
-                            kernel_init,
-                            bias_init,
-                            name=name + "_r_sc",
-                        )
-                    )
-                )
-
-            if self.spatial_dist == "zinb" or self.sc_dist == "zinb":
-                self.p_spatial = (
-                    ConstantLayer(units, input_dim, bias_init, name=name + "_p_spatial")
-                    if self.const_disp
-                    else LinearLayer(
-                        units,
-                        input_dim,
-                        kernel_init,
-                        bias_init,
-                        name=name + "_p_spatial",
-                    )
-                )
-
-                self.p_sc = self.p_spatial
-
-                self.d_spatial = (
-                    ConstantLayer(units, input_dim, bias_init, name=name + "_d_spatial")
-                    if self.const_disp
-                    else LinearLayer(
-                        units,
-                        input_dim,
-                        kernel_init,
-                        bias_init,
-                        name=name + "_d_spatial",
-                    )
-                )
-
-                self.d_sc = self.d_spatial
-
-            elif (
-                self.spatial_dist == "nb"
-                or self.sc_dist == "nb"
-                or self.spatial_dist == "full_norm"
-                or self.sc_dist == "full_norm"
-            ):
-                self.p_spatial = (
-                    ConstantLayer(
-                        units, input_dim, kernel_init, name=name + "_p_spatial"
-                    )
-                    if self.const_disp
-                    else LinearLayer(
-                        units,
-                        input_dim,
-                        kernel_init,
-                        bias_init,
-                        name=name + "_p_spatial",
-                    )
-                )
-
-                self.p_sc = self.p_spatial
-
-        else:
-            if self.spatial_dist == "zinb":
-                self.p_spatial = (
-                    ConstantLayer(units, input_dim, bias_init, name=name + "_p_spatial")
-                    if self.const_disp
-                    else LinearLayer(
-                        units,
-                        input_dim,
-                        kernel_init,
-                        bias_init,
-                        name=name + "_p_spatial",
-                    )
-                )
-
-                self.d_spatial = (
-                    ConstantLayer(units, input_dim, bias_init, name=name + "_d_spatial")
-                    if self.const_disp
-                    else LinearLayer(
-                        units,
-                        input_dim,
-                        kernel_init,
-                        bias_init,
-                        name=name + "_d_spatial",
-                    )
-                )
-
-            elif self.spatial_dist == "nb" or self.spatial_dist == "full_norm":
-                self.p_spatial = (
-                    ConstantLayer(units, input_dim, bias_init, name=name + "_p_spatial")
-                    if self.const_disp
-                    else LinearLayer(
-                        units,
-                        input_dim,
-                        kernel_init,
-                        bias_init,
-                        name=name + "_p_spatial",
-                    )
-                )
-
-            if self.sc_dist == "zinb":
-                self.p_sc = (
-                    ConstantLayer(units, input_dim, bias_init, name=name + "_p_sc")
-                    if self.const_disp
-                    else LinearLayer(
-                        units, input_dim, kernel_init, bias_init, name=name + "_p_sc"
-                    )
-                )
-
-                self.d_sc = (
-                    ConstantLayer(units, input_dim, bias_init, name=name + "_d_sc")
-                    if self.const_disp
-                    else LinearLayer(
-                        units, input_dim, kernel_init, bias_init, name=name + "_d_sc"
-                    )
-                )
-
-            elif self.sc_dist == "nb" or self.sc_dist == "full_norm":
-                self.p_sc = (
-                    ConstantLayer(units, input_dim, bias_init, name=name + "_p_sc")
-                    if self.const_disp
-                    else LinearLayer(
-                        units, input_dim, kernel_init, bias_init, name=name + "_p_sc"
-                    )
-                )
+    def init_layer(self, name):
+        if self.const_disp:
+            return ConstantLayer(
+                self.units, self.input_dim, self.bias_init, name=self.name + name
+            )
+        return LinearLayer(
+            self.units,
+            self.input_dim,
+            self.kernel_init,
+            self.bias_init,
+            name=self.name + name,
+        )
 
     def call(self, inputs, mode="spatial"):
         r = self.r(inputs)
@@ -315,10 +138,7 @@ class ENVIOutputLayer(tf.keras.layers.Layer):
             d = getattr(self, "d_" + mode)(inputs)
             return (r, p, d)
 
-        if (
-            getattr(self, mode + "_dist") == "nb"
-            or getattr(self, mode + "_dist") == "full_norm"
-        ):
+        if getattr(self, mode + "_dist") in ["nb", "full_norm"]:
             p = getattr(self, "p_" + mode)(inputs)
             return (r, p)
 
