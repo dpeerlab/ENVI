@@ -1,14 +1,14 @@
 import os
-import tensorflow as tf
-import numpy as np
-import sklearn.neighbors
-import scipy.sparse
-import scanpy as sc
-import scipy.special
-import tensorflow_probability as tfp
-import sklearn.neural_network
-import scipy.sparse
 import sys
+
+import numpy as np
+import scanpy as sc
+import scipy.sparse
+import scipy.special
+import sklearn.neighbors
+import sklearn.neural_network
+import tensorflow as tf
+import tensorflow_probability as tfp
 
 
 class HiddenPrints:
