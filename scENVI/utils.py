@@ -20,17 +20,17 @@ class HiddenPrints:
         sys.stdout.close()
 
 
-def MatSqrtTF(Mats):
+def matrix_square_root(matrices):
     """
     Computes pseudo matrix square root with tensorflow linear algebra on cpu
 
     Args:
-        Mats (array): Matrices to compute square root of
+        matrices (array): Matrices to compute square root of
     Return:
-        SqrtMats (np.array): pseudo matrix square of Mats
+        pseudo matrix square roots of matrices
     """
     with tf.device("/CPU:0"):
-        e, v = tf.linalg.eigh(Mats)
+        e, v = tf.linalg.eigh(matrices)
         e = tf.where(e < 0, 0, e)
         e = tf.math.sqrt(e)
         return tf.linalg.matmul(
@@ -38,7 +38,7 @@ def MatSqrtTF(Mats):
         ).numpy()
 
 
-def BatchKNN(data, batch, k):
+def batch_knn(data, batch, k):
     """
     Computes kNN matrix for spatial data from multiple batches
 
@@ -47,12 +47,12 @@ def BatchKNN(data, batch, k):
         batch (array): Batch allocation per sample in Data
         k (int): number of neighbors for kNN matrix
     Return:
-        kNNGraphIndex (np.array): for each sample, the index of its k nearest-neighbors
-        WeightedIndex (np.array): Weighted (softmax) distance to each nearest-neighbors
+        knn_graph_index (np.array): indices of each sample's k nearest-neighbors
+        weighted_index (np.array): Weighted (softmax) distance to each nearest-neighbors
     """
 
-    kNNGraphIndex = np.zeros(shape=(data.shape[0], k))
-    WeightedIndex = np.zeros(shape=(data.shape[0], k))
+    knn_graph_index = np.zeros(shape=(data.shape[0], k))
+    weighted_index = np.zeros(shape=(data.shape[0], k))
 
     for val in np.unique(batch):
         val_ind = np.where(batch == val)[0]
@@ -68,12 +68,14 @@ def BatchKNN(data, batch, k):
             -np.reshape(batch_knn.data, [data[val_ind].shape[0], k]), axis=-1
         )
 
-        kNNGraphIndex[val_ind] = val_ind[batch_knn_ind]
-        WeightedIndex[val_ind] = batch_knn_weight
-    return (kNNGraphIndex.astype("int"), WeightedIndex)
+        knn_graph_index[val_ind] = val_ind[batch_knn_ind]
+        weighted_index[val_ind] = batch_knn_weight
+    return (knn_graph_index.astype("int"), weighted_index)
 
 
-def GetNeighExp(spatial_data, kNN, spatial_key="spatial", batch_key=-1, data_key=None):
+def get_niche_expression(
+    spatial_data, kNN, spatial_key="spatial", batch_key=-1, data_key=None
+):
     """
     Computing Niche mean expression based on cell expression and location
 
@@ -88,8 +90,8 @@ def GetNeighExp(spatial_data, kNN, spatial_key="spatial", batch_key=-1, data_key
             (default None, uses gene expression .X)
 
     Return:
-        NeighExp: Average gene expression in niche
-        kNNGraphIndex: indices of nearest spatial neighbors per cell
+        niche_expression: Average gene expression in niche
+        knn_graph_index: indices of nearest spatial neighbors per cell
     """
 
     if data_key is None:
@@ -98,30 +100,30 @@ def GetNeighExp(spatial_data, kNN, spatial_key="spatial", batch_key=-1, data_key
         Data = spatial_data.obsm[data_key]
 
     if batch_key == -1:
-        kNNGraph = sklearn.neighbors.kneighbors_graph(
+        knn_graph = sklearn.neighbors.kneighbors_graph(
             spatial_data.obsm[spatial_key], n_neighbors=kNN, mode="distance", n_jobs=-1
         ).tocoo()
-        kNNGraph = scipy.sparse.coo_matrix(
-            (np.ones_like(kNNGraph.data), (kNNGraph.row, kNNGraph.col)),
-            shape=kNNGraph.shape,
+        knn_graph = scipy.sparse.coo_matrix(
+            (np.ones_like(knn_graph.data), (knn_graph.row, knn_graph.col)),
+            shape=knn_graph.shape,
         )
-        kNNGraphIndex = np.reshape(
-            np.asarray(kNNGraph.col), [spatial_data.obsm[spatial_key].shape[0], kNN]
+        knn_graph_index = np.reshape(
+            np.asarray(knn_graph.col), [spatial_data.obsm[spatial_key].shape[0], kNN]
         )
     else:
-        kNNGraphIndex, _ = BatchKNN(
+        knn_graph_index, _ = batch_knn(
             spatial_data.obsm[spatial_key], spatial_data.obs[batch_key], kNN
         )
 
-    return Data[kNNGraphIndex[np.arange(spatial_data.obsm[spatial_key].shape[0])]]
+    return Data[knn_graph_index[np.arange(spatial_data.obsm[spatial_key].shape[0])]]
 
 
-def GetCOVET(
+def get_covet(
     spatial_data,
-    kNN,
+    k,
     spatial_key="spatial",
     batch_key=-1,
-    MeanExp=None,
+    mean_expression=None,
     weighted=False,
     cov_pc=1,
 ):
@@ -131,72 +133,77 @@ def GetCOVET(
     Args:
         spatial_data (anndata): anndata with spatial data, with obsm 'spatial'
             indicating spatial location of spot/segmented cell
-        kNN (int): number of nearest neighbors to define niche
+        k (int): number of nearest neighbors to define niche
         spatial_key (str): obsm key name with physical location of spots/cells
             (default 'spatial')
         batch_key (str): obs key name of batch/sample of spatial data (default -1)
-        MeanExp (np.array): expression vector to shift niche covariance with
+        mean_expression (np.array): expression vector to shift niche covariance with
         weighted (bool): if True, weights covariance by spatial distance
     Return:
-        COVET: niche covariance matrices
-        kNNGraphIndex: indices of nearest spatial neighbors per cell
+        covet: niche covariance matrices
+        knn_graph_index: indices of nearest spatial neighbors per cell
     """
-    ExpData = spatial_data[:, spatial_data.var.highly_variable].X
+    expression_data = spatial_data[:, spatial_data.var.highly_variable].X
 
     if cov_pc > 0:
-        ExpData = np.log(ExpData + cov_pc)
+        expression_data = np.log(expression_data + cov_pc)
 
     if batch_key == -1 or batch_key not in spatial_data.obs.columns:
-        kNNGraph = sklearn.neighbors.kneighbors_graph(
-            spatial_data.obsm[spatial_key], n_neighbors=kNN, mode="distance", n_jobs=-1
+        knn_graph = sklearn.neighbors.kneighbors_graph(
+            spatial_data.obsm[spatial_key], n_neighbors=k, mode="distance", n_jobs=-1
         ).tocoo()
-        kNNGraph = scipy.sparse.coo_matrix(
-            (np.ones_like(kNNGraph.data), (kNNGraph.row, kNNGraph.col)),
-            shape=kNNGraph.shape,
+        knn_graph = scipy.sparse.coo_matrix(
+            (np.ones_like(knn_graph.data), (knn_graph.row, knn_graph.col)),
+            shape=knn_graph.shape,
         )
-        kNNGraphIndex = np.reshape(
-            np.asarray(kNNGraph.col), [spatial_data.obsm[spatial_key].shape[0], kNN]
+        knn_graph_index = np.reshape(
+            np.asarray(knn_graph.col), [spatial_data.obsm[spatial_key].shape[0], k]
         )
-        WeightedIndex = scipy.special.softmax(
-            -np.reshape(kNNGraph.data, [spatial_data.obsm[spatial_key].shape[0], kNN]),
+        weighted_index = scipy.special.softmax(
+            -np.reshape(knn_graph.data, [spatial_data.obsm[spatial_key].shape[0], k]),
             axis=-1,
         )
     else:
-        kNNGraphIndex, WeightedIndex = BatchKNN(
-            spatial_data.obsm[spatial_key], spatial_data.obs[batch_key], kNN
+        knn_graph_index, weighted_index = batch_knn(
+            spatial_data.obsm[spatial_key], spatial_data.obs[batch_key], k
         )
 
     if not weighted:
-        WeightedIndex = np.ones_like(WeightedIndex) / kNN
+        weighted_index = np.ones_like(weighted_index) / k
 
-    if MeanExp is None:
-        DistanceMatWeighted = (
+    if mean_expression is None:
+        weighted_distance_matrix = (
             (
-                ExpData.mean(axis=0)[None, None, :]
-                - ExpData[kNNGraphIndex[np.arange(ExpData.shape[0])]]
+                expression_data.mean(axis=0)[None, None, :]
+                - expression_data[knn_graph_index[np.arange(expression_data.shape[0])]]
             )
-            * np.sqrt(WeightedIndex)[:, :, None]
-            * np.sqrt(1 / (1 - np.sum(np.square(WeightedIndex), axis=-1)))[
+            * np.sqrt(weighted_index)[:, :, None]
+            * np.sqrt(1 / (1 - np.sum(np.square(weighted_index), axis=-1)))[
                 :, None, None
             ]
         )
     else:
-        DistanceMatWeighted = (
-            (MeanExp[:, None, :] - ExpData[kNNGraphIndex[np.arange(ExpData.shape[0])]])
-            * np.sqrt(WeightedIndex)[:, :, None]
-            * np.sqrt(1 / (1 - np.sum(np.square(WeightedIndex), axis=-1)))[
+        weighted_distance_matrix = (
+            (
+                mean_expression[:, None, :]
+                - expression_data[knn_graph_index[np.arange(expression_data.shape[0])]]
+            )
+            * np.sqrt(weighted_index)[:, :, None]
+            * np.sqrt(1 / (1 - np.sum(np.square(weighted_index), axis=-1)))[
                 :, None, None
             ]
         )
 
-    COVET = np.matmul(DistanceMatWeighted.transpose([0, 2, 1]), DistanceMatWeighted)
-    COVET = COVET + COVET.mean() * 0.00001 * np.expand_dims(
-        np.identity(COVET.shape[-1]), axis=0
+    covet = np.matmul(
+        weighted_distance_matrix.transpose([0, 2, 1]), weighted_distance_matrix
     )
-    return (COVET, kNNGraphIndex)
+    covet = covet + covet.mean() * 0.00001 * np.expand_dims(
+        np.identity(covet.shape[-1]), axis=0
+    )
+    return (covet, knn_graph_index)
 
 
-def GetCov(
+def get_niche_covariance(
     spatial_data, k, g, genes, cov_dist, spatial_key="spatial", batch_key=-1, cov_pc=1
 ):
     """
@@ -212,16 +219,16 @@ def GetCov(
         batch_key (str): obs key for batch information (default -1, for no batch)
 
     Return:
-        COVET: raw, untransformed niche covariance matrices
-        COVET_SQRT: covariance matrices transformed into chosen cov_dist
-        NeighExp: Average gene expression in niche
-        CovGenes: Genes used for niche covariance
+        covet: raw, untransformed niche covariance matrices
+        covet_sqrt: covariance matrices transformed into chosen cov_dist
+        niche_expression: Average gene expression in niche
+        covet_genes: Genes used for niche covariance
     """
 
     spatial_data.layers["log"] = np.log(spatial_data.X + 1)
 
     if g == -1:
-        CovGeneSet = np.arange(spatial_data.shape[-1])
+        covet_gene_set = np.arange(spatial_data.shape[-1])
         spatial_data.var.highly_variable = True
     else:
         sc.pp.highly_variable_genes(spatial_data, n_top_genes=g, layer="log")
@@ -230,10 +237,10 @@ def GetCov(
         if len(genes) > 0:
             spatial_data.var["highly_variable"][genes] = True
 
-    CovGeneSet = np.where(np.asarray(spatial_data.var.highly_variable))[0]
-    CovGenes = spatial_data.var_names[CovGeneSet]
+    covet_gene_set = np.where(np.asarray(spatial_data.var.highly_variable))[0]
+    covet_genes = spatial_data.var_names[covet_gene_set]
 
-    COVET, kNNGraphIndex = GetCOVET(
+    covet, knn_graph_index = get_covet(
         spatial_data,
         k,
         spatial_key=spatial_key,
@@ -241,27 +248,27 @@ def GetCov(
         weighted=False,
         cov_pc=cov_pc,
     )
-    NicheMat = spatial_data.X[kNNGraphIndex[np.arange(spatial_data.shape[0])]]
+    niche_expression = spatial_data.X[knn_graph_index[np.arange(spatial_data.shape[0])]]
 
     if cov_dist == "norm":
-        COVET_SQRT = COVET.reshape([COVET.shape[0], -1])
-        COVET_SQRT = (
-            COVET_SQRT - COVET_SQRT.mean(axis=0, keepdims=True)
-        ) / COVET_SQRT.std(axis=0, keepdims=True)
+        covet_sqrt = covet.reshape([covet.shape[0], -1])
+        covet_sqrt = (
+            covet_sqrt - covet_sqrt.mean(axis=0, keepdims=True)
+        ) / covet_sqrt.std(axis=0, keepdims=True)
     if cov_dist == "OT":
-        COVET_SQRT = MatSqrtTF(COVET)
+        covet_sqrt = matrix_square_root(covet)
     else:
-        COVET_SQRT = np.copy(COVET)
+        covet_sqrt = np.copy(covet)
 
     return (
-        COVET.astype("float32"),
-        COVET_SQRT.astype("float32"),
-        NicheMat.astype("float32"),
-        CovGenes,
+        covet.astype("float32"),
+        covet_sqrt.astype("float32"),
+        niche_expression.astype("float32"),
+        covet_genes,
     )
 
 
-def LogNormalKL(mean, log_std, agg=None):
+def log_normal_kl(mean, log_std, agg=None):
     KL = 0.5 * (tf.square(mean) + tf.square(tf.exp(log_std)) - 2 * log_std)
     if agg is None:
         return KL
@@ -272,7 +279,7 @@ def LogNormalKL(mean, log_std, agg=None):
     return tf.reduce_mean(KL, axis=-1)
 
 
-def NormalKL(mean, log_std, agg=None):
+def normal_kl(mean, log_std, agg=None):
     KL = 0.5 * (tf.square(mean) + tf.square(tf.exp(log_std)) - 2 * log_std)
     if agg is None:
         return KL
@@ -326,7 +333,7 @@ def log_zinb_pdf(sample, r, p, d, agg=None):
     return tf.reduce_mean(log_prob, axis=-1)
 
 
-def OTDistance(sample, mean, agg=None):
+def ot_distance(sample, mean, agg=None):
     sample = tf.reshape(sample, [sample.shape[0], -1])
     mean = tf.reshape(mean, [mean.shape[0], -1])
     log_prob = -tf.square(sample - mean)

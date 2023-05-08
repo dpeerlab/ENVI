@@ -12,7 +12,7 @@ from scENVI import utils
 from scENVI import output_layer
 
 
-def COVET(data, k=8, g=64, genes=[], spatial_key="spatial", batch_key=-1, cov_pc=1):
+def covet(data, k=8, g=64, genes=[], spatial_key="spatial", batch_key=-1, cov_pc=1):
     """
     Compute niche covariance matrices for spatial data
 
@@ -30,11 +30,11 @@ def COVET(data, k=8, g=64, genes=[], spatial_key="spatial", batch_key=-1, cov_pc
     Return:
         COVET: raw, untransformed niche covariance matrices
         COVET_SQRT: covariance matrices transformed into chosen cov_dist
-        NeighExp: Average gene expression in niche
-        CovGenes: Genes used for niche covariance
+        niche_expression: Average gene expression in niche
+        covet_genes: Genes used for niche covariance
     """
 
-    COVET, COVET_SQRT, _, CovGenes = utils.GetCov(
+    covet, covet_sqrt, _, covet_genes = utils.get_niche_covariance(
         data,
         k,
         g,
@@ -45,9 +45,9 @@ def COVET(data, k=8, g=64, genes=[], spatial_key="spatial", batch_key=-1, cov_pc
         cov_pc=cov_pc,
     )
 
-    data.obsm["COVET"] = COVET.astype("float32")
-    data.obsm["COVET_SQRT"] = COVET_SQRT.astype("float32")
-    data.uns["COVET_Genes"] = CovGenes
+    data.obsm["COVET"] = covet.astype("float32")
+    data.obsm["COVET_SQRT"] = covet_sqrt.astype("float32")
+    data.uns["COVET_Genes"] = covet_genes
 
     return data
 
@@ -175,9 +175,7 @@ class ENVI:
             self.num_neurons = (
                 kwargs["NumNeurons"] if "NumNeurons" in kwargs.keys() else num_neurons
             )
-            self.latent_dim = (
-                kwargs["latent_dim"] if "latent_dim" in kwargs.keys() else latent_dim
-            )
+            self.latent_dim = latent_dim
 
             self.spatial_dist = spatial_dist
             self.cov_dist = cov_dist
@@ -266,8 +264,8 @@ class ENVI:
                 self.spatial_data.obsm["COVET"],
                 self.spatial_data.obsm["COVET_SQRT"],
                 self.spatial_data.obsm["NicheMat"],
-                self.CovGenes,
-            ) = utils.GetCov(
+                self.covet_genes,
+            ) = utils.get_niche_covariance(
                 self.spatial_data,
                 self.k_nearest,
                 self.num_cov_genes,
@@ -449,65 +447,65 @@ class ENVI:
             print("Finished loading ENVI model")
 
     @tf.function
-    def encode_nn(self, Input):
+    def encode_nn(self, input):
         """
         Encoder forward pass
 
         Args:
-            Input (array): input to encoder NN
+            input (array): input to encoder NN
                 (size of #genes in spatial data + confounder)
         Returns:
-            Output (array): NN output
+            output (array): NN output
         """
 
-        Output = Input
+        output = input
         for i in range(self.num_layers - 1):
-            Output = self.encoder_layers[i](Output) + (
-                Output if (i > 0 and self.skip) else 0
+            output = self.encoder_layers[i](output) + (
+                output if (i > 0 and self.skip) else 0
             )
-            Output = tf.nn.leaky_relu(Output)
-        return self.encoder_layers[-1](Output)
+            output = tf.nn.leaky_relu(output)
+        return self.encoder_layers[-1](output)
 
     @tf.function
-    def decode_expression_nn(self, Input):
+    def decode_expression_nn(self, input):
         """
         Expression decoder forward pass
 
         Args:
-            Input (array): input to expression decoder NN
+            input (array): input to expression decoder NN
                 (size of latent dimension + confounder)
 
         Returns:
-            Output (array): NN output
+            output (array): NN output
         """
 
-        Output = Input
+        output = input
         for i in range(self.num_layers - 1):
-            Output = self.decoder_expression_layers[i](Output) + (
-                Output if (i > 0 and self.skip) else 0
+            output = self.decoder_expression_layers[i](output) + (
+                output if (i > 0 and self.skip) else 0
             )
-            Output = tf.nn.leaky_relu(Output)
-        return Output
+            output = tf.nn.leaky_relu(output)
+        return output
 
     @tf.function
-    def decode_cov_nn(self, Output):
+    def decode_cov_nn(self, input):
         """
         Covariance (niche) decoder forward pass
 
         Args:
-            Input (array): input to niche decoder NN
+            input (array): input to niche decoder NN
                 (size of latent dimension + confounder)
 
         Returns:
-            Output (array): NN output
+            output (array): NN output
         """
-
+        output = input
         for i in range(self.num_layers - 1):
-            Output = self.decoder_covet_layers[i](Output) + (
-                Output if (i > 0 and self.skip) else 0
+            output = self.decoder_covet_layers[i](output) + (
+                output if (i > 0 and self.skip) else 0
             )
-            Output = tf.nn.leaky_relu(Output)
-        return self.decoder_covet_layers[-1](Output)
+            output = tf.nn.leaky_relu(output)
+        return self.decoder_covet_layers[-1](output)
 
     @tf.function
     def encode(self, x, mode="sc"):
@@ -792,29 +790,29 @@ class ENVI:
         elif self.cov_dist == "OT":
             cov_mu = self.cov_decode(z_spatial)
             cov_like = tf.reduce_mean(
-                utils.OTDistance(cov_sample, cov_mu, agg=self.agg), axis=0
+                utils.ot_distance(cov_sample, cov_mu, agg=self.agg), axis=0
             )
 
         if self.prior_dist == "norm":
             kl_spatial = tf.reduce_mean(
-                utils.NormalKL(mean_spatial, logstd_spatial, agg=self.agg), axis=0
+                utils.normal_kl(mean_spatial, logstd_spatial, agg=self.agg), axis=0
             )
             kl_sc = tf.reduce_mean(
-                utils.NormalKL(mean_sc, logstd_sc, agg=self.agg), axis=0
+                utils.normal_kl(mean_sc, logstd_sc, agg=self.agg), axis=0
             )
         elif self.prior_dist == "log_norm":
             kl_spatial = tf.reduce_mean(
-                utils.LogNormalKL(mean_spatial, logstd_spatial, agg=self.agg), axis=0
+                utils.log_normal_kl(mean_spatial, logstd_spatial, agg=self.agg), axis=0
             )
             kl_sc = tf.reduce_mean(
-                utils.LogNormalKL(mean_sc, logstd_sc, agg=self.agg), axis=0
+                utils.log_normal_kl(mean_sc, logstd_sc, agg=self.agg), axis=0
             )
 
         kl = 0.5 * kl_spatial + 0.5 * kl_sc
 
         return (spatial_like, cov_like, sc_like, kl)
 
-    def GetCovMean(self, cov_mat):
+    def get_niche_covarianceMean(self, cov_mat):
         """
         Reconstructs true covariance (untransformed)
 
@@ -869,12 +867,12 @@ class ENVI:
         self.spatial_data.obs["latent_cluster"] = comm_emb[: self.spatial_data.shape[0]]
         self.sc_data.obs["latent_cluster"] = comm_emb[self.spatial_data.shape[0] :]
 
-    def latent_rep(self, NumDiv=16, data=None, mode=None):
+    def latent_rep(self, num_div=16, data=None, mode=None):
         """
         Compute latent embeddings for spatial and single cell data
 
         Args:
-            NumDiv (int): number of splits for forward pass to allow to fit in gpu
+            num_div (int): number of splits for forward pass to allow to fit in gpu
         Return:
             no return, adds 'envi_latent' ENVI.spatial_data.obsm and
             ENVI.spatial_data.obsm
@@ -886,12 +884,12 @@ class ENVI:
                     self.encode(
                         np.array_split(
                             self.spatial_data.X.astype(tf.keras.backend.floatx()),
-                            NumDiv,
+                            num_div,
                             axis=0,
                         )[_],
                         mode="spatial",
                     )[0].numpy()
-                    for _ in range(NumDiv)
+                    for _ in range(num_div)
                 ],
                 axis=0,
             )
@@ -903,12 +901,12 @@ class ENVI:
                             self.sc_data[:, self.spatial_data.var_names].X.astype(
                                 tf.keras.backend.floatx()
                             ),
-                            NumDiv,
+                            num_div,
                             axis=0,
                         )[_],
                         mode="sc",
                     )[0].numpy()
-                    for _ in range(NumDiv)
+                    for _ in range(num_div)
                 ],
                 axis=0,
             )
@@ -953,12 +951,12 @@ class ENVI:
                             data[:, self.spatial_data.var_names].X.astype(
                                 tf.keras.backend.floatx()
                             ),
-                            NumDiv,
+                            num_div,
                             axis=0,
                         )[_],
                         mode=mode,
                     )[0].numpy()
-                    for _ in range(NumDiv)
+                    for _ in range(num_div)
                 ],
                 axis=0,
             )
@@ -1013,12 +1011,12 @@ class ENVI:
                 + "_envi in obsm of ENVI.spatial_data"
             )
 
-    def impute(self, NumDiv=16, return_raw=True, data=None):
+    def impute(self, num_div=16, return_raw=True, data=None):
         """
         Input full transcriptome for spatial data
 
         Args:
-            NumDiv (int): number of splits for forward pass to allow to fit in gpu
+            num_div (int): number of splits for forward pass to allow to fit in gpu
             return_raw (bool): if True, un-logs and un-zscores imputation
                 if either were chosen
         Return:
@@ -1031,13 +1029,13 @@ class ENVI:
                     self.GetMeanSample(
                         self.expression_decode(
                             np.array_split(
-                                self.spatial_data.obsm["envi_latent"], NumDiv, axis=0
+                                self.spatial_data.obsm["envi_latent"], num_div, axis=0
                             )[_],
                             mode="sc",
                         ),
                         mode="sc",
                     ).numpy()
-                    for _ in range(NumDiv)
+                    for _ in range(num_div)
                 ],
                 axis=0,
             )
@@ -1065,11 +1063,11 @@ class ENVI:
                 [
                     self.GetMeanSample(
                         self.expression_decode(
-                            np.array_split(latent, NumDiv, axis=0)[_], mode="sc"
+                            np.array_split(latent, num_div, axis=0)[_], mode="sc"
                         ),
                         mode="sc",
                     ).numpy()
-                    for _ in range(NumDiv)
+                    for _ in range(num_div)
                 ],
                 axis=0,
             )
@@ -1096,12 +1094,12 @@ class ENVI:
             "See 'imputation' in obsm of ENVI.spatial_data"
         )
 
-    def infer_COVET(self, NumDiv=16, data=None):
+    def infer_covet(self, num_div=16, data=None):
         """
         Infer covariance niche composition for single cell data
 
         Args:
-            NumDiv (int): number of splits for forward pass to allow to fit in gpu
+            num_div (int): number of splits for forward pass to allow to fit in gpu
             revert (bool): if True, computes actual covariance,
                 if False, computes transformed covariance (default False)
         Return:
@@ -1113,51 +1111,51 @@ class ENVI:
                 [
                     self.cov_decode(
                         np.array_split(
-                            self.sc_data.obsm["envi_latent"], NumDiv, axis=0
+                            self.sc_data.obsm["envi_latent"], num_div, axis=0
                         )[_]
                     )
-                    for _ in range(NumDiv)
+                    for _ in range(num_div)
                 ],
                 axis=0,
             )
             self.sc_data.obsm["COVET"] = np.concatenate(
                 [
                     np.linalg.matrix_power(
-                        np.array_split(self.sc_data.obsm["COVET_SQRT"], NumDiv, axis=0)[
-                            _
-                        ],
+                        np.array_split(
+                            self.sc_data.obsm["COVET_SQRT"], num_div, axis=0
+                        )[i],
                         2,
                     )
-                    for _ in range(NumDiv)
+                    for i in range(num_div)
                 ],
                 axis=0,
             )
         else:
             latent = self.latent_rep(data=data, mode="sc")
-            COVET_SQRT = np.concatenate(
+            covet_sqrt = np.concatenate(
                 [
-                    self.cov_decode(np.array_split(latent, NumDiv, axis=0)[_])
-                    for _ in range(NumDiv)
+                    self.cov_decode(np.array_split(latent, num_div, axis=0)[i])
+                    for i in range(num_div)
                 ],
                 axis=0,
             )
-            COVET = np.concatenate(
+            covet = np.concatenate(
                 [
                     np.linalg.matrix_power(
-                        np.array_split(COVET_SQRT, NumDiv, axis=0)[_], 2
+                        np.array_split(covet_sqrt, num_div, axis=0)[i], 2
                     )
-                    for _ in range(NumDiv)
+                    for i in range(num_div)
                 ],
                 axis=0,
             )
-            return (COVET_SQRT, COVET)
+            return (covet_sqrt, covet)
 
-    def infer_COVET_spatial(self, NumDiv=16):
+    def infer_covet_spatial(self, num_div=16):
         """
         Reconstruct covariance niche composition for spatial data
 
         Args:
-            NumDiv (int): number of splits for forward pass to allow to fit in gpu
+            num_div (int): number of splits for forward pass to allow to fit in gpu
 
         Return:
             no return, adds 'COVET_SQRT' or 'COVET' to ENVI.sc_data.obsm
@@ -1167,10 +1165,10 @@ class ENVI:
             [
                 self.cov_decode(
                     np.array_split(
-                        self.spatial_data.obsm["envi_latent"], NumDiv, axis=0
+                        self.spatial_data.obsm["envi_latent"], num_div, axis=0
                     )[_]
                 )
-                for _ in range(NumDiv)
+                for _ in range(num_div)
             ],
             axis=0,
         )
@@ -1178,11 +1176,11 @@ class ENVI:
             [
                 np.linalg.matrix_power(
                     np.array_split(
-                        self.spatial_data.obsm["COVET_SQRT_envi"], NumDiv, axis=0
+                        self.spatial_data.obsm["COVET_SQRT_envi"], num_div, axis=0
                     )[_],
                     2,
                 )
-                for _ in range(NumDiv)
+                for _ in range(num_div)
             ],
             axis=0,
         )
@@ -1221,14 +1219,16 @@ class ENVI:
 
         import sklearn.preprocessing
 
-        LabelEnc = sklearn.preprocessing.LabelBinarizer().fit(
+        label_encoding = sklearn.preprocessing.LabelBinarizer().fit(
             self.spatial_data.obs[niche_key]
         )
-        spatialCellTypeEncoding = LabelEnc.transform(self.spatial_data.obs[niche_key])
-        self.spatial_data.obsm[niche_key + "_enc"] = spatialCellTypeEncoding
-        CellTypeName = LabelEnc.classes_
+        spatial_cell_type_encoding = label_encoding.transform(
+            self.spatial_data.obs[niche_key]
+        )
+        self.spatial_data.obsm[niche_key + "_enc"] = spatial_cell_type_encoding
+        CellTypeName = label_encoding.classes_
 
-        NeighCellType = utils.GetNeighExp(
+        neighbor_cell_type = utils.get_niche_expression(
             self.spatial_data,
             self.k_nearest,
             data_key=(niche_key + "_enc"),
@@ -1236,30 +1236,32 @@ class ENVI:
             batch_key=self.batch_key,
         )
 
-        NeighCellType = NeighCellType.sum(axis=1).astype("float32")
+        neighbor_cell_type = neighbor_cell_type.sum(axis=1).astype("float32")
 
         self.spatial_data.obsm["niche_by_type"] = pd.DataFrame(
-            NeighCellType, columns=CellTypeName, index=self.spatial_data.obs_names
+            neighbor_cell_type, columns=CellTypeName, index=self.spatial_data.obs_names
         )
 
         if cluster:
             import phenograph
 
         if data is None:
-            self.infer_COVET(16, False)
+            self.infer_covet(16, False)
 
             if pred_key is None:
-                CovFit = self.spatial_data.obsm["COVET_SQRT"]
-                CovPred = self.sc_data.obsm["COVET_SQRT"]
+                covet_fit = self.spatial_data.obsm["COVET_SQRT"]
+                covet_pred = self.sc_data.obsm["COVET_SQRT"]
 
-                NeighFit = self.spatial_data.obsm["niche_by_type"]
+                neighbor_fit = self.spatial_data.obsm["niche_by_type"]
 
                 if norm_reg:
-                    NeighFit = NeighFit / self.spatial_data.obsm["cell_type_enc"].sum(
-                        axis=0, keepdims=True
-                    )
-                    NeighFit = (
-                        NeighFit / NeighFit.sum(axis=1, keepdims=True) * self.k_nearest
+                    neighbor_fit = neighbor_fit / self.spatial_data.obsm[
+                        "cell_type_enc"
+                    ].sum(axis=0, keepdims=True)
+                    neighbor_fit = (
+                        neighbor_fit
+                        / neighbor_fit.sum(axis=1, keepdims=True)
+                        * self.k_nearest
                     )
 
                 if cluster:
@@ -1267,8 +1269,8 @@ class ENVI:
                         phenoclusters = phenograph.cluster(
                             np.concatenate(
                                 (
-                                    CovFit.reshape([CovFit.shape[0], -1]),
-                                    CovPred.reshape([CovPred.shape[0], -1]),
+                                    covet_fit.reshape([covet_fit.shape[0], -1]),
+                                    covet_pred.reshape([covet_pred.shape[0], -1]),
                                 ),
                                 axis=0,
                             ),
@@ -1277,12 +1279,12 @@ class ENVI:
                             resolution_parameter=res,
                         )
 
-                    phenoclusters_fit = phenoclusters[: CovFit.shape[0]]
-                    phenoclusters_pred = phenoclusters[CovFit.shape[0] :]
+                    phenoclusters_fit = phenoclusters[: covet_fit.shape[0]]
+                    phenoclusters_pred = phenoclusters[covet_fit.shape[0] :]
 
                     avg_niche = np.asarray(
                         [
-                            NeighFit[phenoclusters_fit == clust].mean(axis=0)
+                            neighbor_fit[phenoclusters_fit == clust].mean(axis=0)
                             for clust in np.arange(phenoclusters.max() + 1)
                         ]
                     )
@@ -1295,41 +1297,43 @@ class ENVI:
                     import sklearn.neighbors
 
                     regressor = sklearn.neighbors.KNeighborsRegressor(
-                        n_neighbors=min(k, CovFit.shape[0])
+                        n_neighbors=min(k, covet_fit.shape[0])
                     )
 
-                    regressor.fit(CovFit.reshape([CovFit.shape[0], -1]), NeighFit)
+                    regressor.fit(
+                        covet_fit.reshape([covet_fit.shape[0], -1]), neighbor_fit
+                    )
                     NeighPred = regressor.predict(
-                        CovPred.reshape([CovPred.shape[0], -1])
+                        covet_pred.reshape([covet_pred.shape[0], -1])
                     )
                     self.sc_data.obsm["niche_by_type"] = pd.DataFrame(
                         NeighPred, columns=CellTypeName, index=self.sc_data.obs_names
                     )
             else:
                 NeighPred = np.zeros(
-                    shape=(self.sc_data.shape[0], NeighCellType.shape[-1])
+                    shape=(self.sc_data.shape[0], neighbor_cell_type.shape[-1])
                 )
                 for val in np.unique(self.sc_data.obs[pred_key]):
-                    CovFit = self.spatial_data.obsm["COVET_SQRT"][
+                    covet_fit = self.spatial_data.obsm["COVET_SQRT"][
                         self.spatial_data.obs[pred_key] == val
                     ]
-                    CovPred = self.sc_data.obsm["COVET_SQRT"][
+                    covet_pred = self.sc_data.obsm["COVET_SQRT"][
                         self.sc_data.obs[pred_key] == val
                     ]
 
-                    NeighFit = np.asarray(
+                    neighbor_fit = np.asarray(
                         self.spatial_data.obsm["niche_by_type"][
                             self.spatial_data.obs[pred_key] == val
                         ]
                     )
 
                     if norm_reg:
-                        NeighFit = NeighFit / self.spatial_data.obsm[
+                        neighbor_fit = neighbor_fit / self.spatial_data.obsm[
                             "cell_type_enc"
                         ].sum(axis=0, keepdims=True)
-                        NeighFit = (
-                            NeighFit
-                            / NeighFit.sum(axis=1, keepdims=True)
+                        neighbor_fit = (
+                            neighbor_fit
+                            / neighbor_fit.sum(axis=1, keepdims=True)
                             * self.k_nearest
                         )
 
@@ -1338,8 +1342,8 @@ class ENVI:
                             phenoclusters = phenograph.cluster(
                                 np.concatenate(
                                     (
-                                        CovFit.reshape([CovFit.shape[0], -1]),
-                                        CovPred.reshape([CovPred.shape[0], -1]),
+                                        covet_fit.reshape([covet_fit.shape[0], -1]),
+                                        covet_pred.reshape([covet_pred.shape[0], -1]),
                                     ),
                                     axis=0,
                                 ),
@@ -1348,12 +1352,12 @@ class ENVI:
                                 resolution_parameter=res,
                             )[0]
 
-                        phenoclusters_fit = phenoclusters[: CovFit.shape[0]]
-                        phenoclusters_pred = phenoclusters[CovFit.shape[0] :]
+                        phenoclusters_fit = phenoclusters[: covet_fit.shape[0]]
+                        phenoclusters_pred = phenoclusters[covet_fit.shape[0] :]
 
                         avg_niche = np.asarray(
                             [
-                                NeighFit[phenoclusters_fit == clust].mean(axis=0)
+                                neighbor_fit[phenoclusters_fit == clust].mean(axis=0)
                                 for clust in np.arange(phenoclusters.max() + 1)
                             ]
                         )
@@ -1365,32 +1369,38 @@ class ENVI:
                         import sklearn.neighbors
 
                         regressor = sklearn.neighbors.KNeighborsRegressor(
-                            n_neighbors=min(k, CovFit.shape[0])
+                            n_neighbors=min(k, covet_fit.shape[0])
                         )
 
-                        regressor.fit(CovFit.reshape([CovFit.shape[0], -1]), NeighFit)
+                        regressor.fit(
+                            covet_fit.reshape([covet_fit.shape[0], -1]), neighbor_fit
+                        )
                         NeighPred[
                             self.sc_data.obs[pred_key] == val
-                        ] = regressor.predict(CovPred.reshape([CovPred.shape[0], -1]))
+                        ] = regressor.predict(
+                            covet_pred.reshape([covet_pred.shape[0], -1])
+                        )
 
                 self.sc_data.obsm["niche_by_type"] = pd.DataFrame(
                     NeighPred, columns=CellTypeName, index=self.sc_data.obs_names
                 )
         else:
-            sc_cov_mats = self.infer_COVET(16, False, data)
+            sc_cov_mats = self.infer_covet(16, False, data)
 
             if pred_key is None:
-                CovFit = self.spatial_data.obsm["COVET_SQRT"]
-                CovPred = sc_cov_mats
+                covet_fit = self.spatial_data.obsm["COVET_SQRT"]
+                covet_pred = sc_cov_mats
 
-                NeighFit = self.spatial_data.obsm["niche_by_type"]
+                neighbor_fit = self.spatial_data.obsm["niche_by_type"]
 
                 if norm_reg:
-                    NeighFit = NeighFit / self.spatial_data.obsm["cell_type_enc"].sum(
-                        axis=0, keepdims=True
-                    )
-                    NeighFit = (
-                        NeighFit / NeighFit.sum(axis=1, keepdims=True) * self.k_nearest
+                    neighbor_fit = neighbor_fit / self.spatial_data.obsm[
+                        "cell_type_enc"
+                    ].sum(axis=0, keepdims=True)
+                    neighbor_fit = (
+                        neighbor_fit
+                        / neighbor_fit.sum(axis=1, keepdims=True)
+                        * self.k_nearest
                     )
 
                 if cluster:
@@ -1398,8 +1408,8 @@ class ENVI:
                         phenoclusters = phenograph.cluster(
                             np.concatenate(
                                 (
-                                    CovFit.reshape([CovFit.shape[0], -1]),
-                                    CovPred.reshape([CovPred.shape[0], -1]),
+                                    covet_fit.reshape([covet_fit.shape[0], -1]),
+                                    covet_pred.reshape([covet_pred.shape[0], -1]),
                                 ),
                                 axis=0,
                             ),
@@ -1408,12 +1418,12 @@ class ENVI:
                             resolution_parameter=res,
                         )
 
-                    phenoclusters_fit = phenoclusters[: CovFit.shape[0]]
-                    phenoclusters_pred = phenoclusters[CovFit.shape[0] :]
+                    phenoclusters_fit = phenoclusters[: covet_fit.shape[0]]
+                    phenoclusters_pred = phenoclusters[covet_fit.shape[0] :]
 
                     avg_niche = np.asarray(
                         [
-                            NeighFit[phenoclusters_fit == clust].mean(axis=0)
+                            neighbor_fit[phenoclusters_fit == clust].mean(axis=0)
                             for clust in np.arange(phenoclusters.max() + 1)
                         ]
                     )
@@ -1426,37 +1436,41 @@ class ENVI:
                     import sklearn.neighbors
 
                     regressor = sklearn.neighbors.KNeighborsRegressor(
-                        n_neighbors=min(k, CovFit.shape[0])
+                        n_neighbors=min(k, covet_fit.shape[0])
                     )
 
-                    regressor.fit(CovFit.reshape([CovFit.shape[0], -1]), NeighFit)
+                    regressor.fit(
+                        covet_fit.reshape([covet_fit.shape[0], -1]), neighbor_fit
+                    )
                     NeighPred = regressor.predict(
-                        CovPred.reshape([CovPred.shape[0], -1])
+                        covet_pred.reshape([covet_pred.shape[0], -1])
                     )
                     niche_by_type = pd.DataFrame(
                         NeighPred, columns=CellTypeName, index=data.obs_names
                     )
             else:
-                NeighPred = np.zeros(shape=(data.shape[0], NeighCellType.shape[-1]))
+                NeighPred = np.zeros(
+                    shape=(data.shape[0], neighbor_cell_type.shape[-1])
+                )
                 for val in np.unique(self.sc_data.obs[pred_key]):
-                    CovFit = self.spatial_data.obsm["COVET_SQRT"][
+                    covet_fit = self.spatial_data.obsm["COVET_SQRT"][
                         self.spatial_data.obs[pred_key] == val
                     ]
-                    CovPred = sc_cov_mats[data.obs[pred_key] == val]
+                    covet_pred = sc_cov_mats[data.obs[pred_key] == val]
 
-                    NeighFit = np.asarray(
+                    neighbor_fit = np.asarray(
                         self.spatial_data.obsm["niche_by_type"][
                             self.spatial_data.obs[pred_key] == val
                         ]
                     )
 
                     if norm_reg:
-                        NeighFit = NeighFit / self.spatial_data.obsm[
+                        neighbor_fit = neighbor_fit / self.spatial_data.obsm[
                             "cell_type_enc"
                         ].sum(axis=0, keepdims=True)
-                        NeighFit = (
-                            NeighFit
-                            / NeighFit.sum(axis=1, keepdims=True)
+                        neighbor_fit = (
+                            neighbor_fit
+                            / neighbor_fit.sum(axis=1, keepdims=True)
                             * self.k_nearest
                         )
 
@@ -1465,8 +1479,8 @@ class ENVI:
                             phenoclusters = phenograph.cluster(
                                 np.concatenate(
                                     (
-                                        CovFit.reshape([CovFit.shape[0], -1]),
-                                        CovPred.reshape([CovPred.shape[0], -1]),
+                                        covet_fit.reshape([covet_fit.shape[0], -1]),
+                                        covet_pred.reshape([covet_pred.shape[0], -1]),
                                     ),
                                     axis=0,
                                 ),
@@ -1475,12 +1489,12 @@ class ENVI:
                                 resolution_parameter=res,
                             )[0]
 
-                        phenoclusters_fit = phenoclusters[: CovFit.shape[0]]
-                        phenoclusters_pred = phenoclusters[CovFit.shape[0] :]
+                        phenoclusters_fit = phenoclusters[: covet_fit.shape[0]]
+                        phenoclusters_pred = phenoclusters[covet_fit.shape[0] :]
 
                         avg_niche = np.asarray(
                             [
-                                NeighFit[phenoclusters_fit == clust].mean(axis=0)
+                                neighbor_fit[phenoclusters_fit == clust].mean(axis=0)
                                 for clust in np.arange(phenoclusters.max() + 1)
                             ]
                         )
@@ -1492,12 +1506,14 @@ class ENVI:
                         import sklearn.neighbors
 
                         regressor = sklearn.neighbors.KNeighborsRegressor(
-                            n_neighbors=min(k, CovFit.shape[0])
+                            n_neighbors=min(k, covet_fit.shape[0])
                         )
 
-                        regressor.fit(CovFit.reshape([CovFit.shape[0], -1]), NeighFit)
+                        regressor.fit(
+                            covet_fit.reshape([covet_fit.shape[0], -1]), neighbor_fit
+                        )
                         NeighPred[data.obs[pred_key] == val] = regressor.predict(
-                            CovPred.reshape([CovPred.shape[0], -1])
+                            covet_pred.reshape([covet_pred.shape[0], -1])
                         )
 
                 niche_by_type = pd.DataFrame(
@@ -1564,24 +1580,24 @@ class ENVI:
 
     def Train(
         self,
-        LR=0.0001,
+        lr=0.0001,
         batch_size=512,
         epochs=np.power(2, 14),
         verbose=64,
-        LR_Sched=True,
+        lr_schedule=True,
     ):
         """
         ENVI training loop and computing of latent representation at end
 
         Args:
-            LR (float): learning rate for training (default 0.0001)
+            lr (float): learning rate for training (default 0.0001)
             batch_size (int): total batch size for traning, to sample from single cell
                 and spatial data (default 512)
             epochs (int): number of training steps (default 16384)
             split (float): train/test split of data (default 1.0)
             verbose (int): how many training step between each print statement,
                 if -1 than no printing (default 128)
-            LR_Sched (bool): if True, decreases LR by factor of 10 after
+            lr_schedule (bool): if True, decreases learning rate by factor of 10 after
                 0.75 * epochs steps (default True)
         Return:
             no return, trains ENVI and adds 'envi_latent' to
@@ -1590,8 +1606,8 @@ class ENVI:
 
         print("Training ENVI for {} steps".format(epochs))
 
-        self.LR = LR
-        self.optimizer = tf.keras.optimizers.Adam(self.LR)
+        self.lr = lr
+        self.optimizer = tf.keras.optimizers.Adam(self.lr)
 
         spatial_data_train = self.spatial_data.X.astype(tf.keras.backend.floatx())
         cov_data_train = self.spatial_data.obsm["COVET_SQRT"].astype(
@@ -1608,9 +1624,9 @@ class ENVI:
 
         tq = trange(epochs, leave=True, desc="")
         for epoch in tq:  # range(0, epochs + 1):
-            if (epoch == int(epochs * 0.75)) and LR_Sched:
-                self.LR = LR * 0.1
-                self.optimizer.lr.assign(self.LR)
+            if (epoch == int(epochs * 0.75)) and lr_schedule:
+                self.lr = lr * 0.1
+                self.optimizer.lr.assign(self.lr)
 
             self.batch_spatial = np.random.choice(
                 np.arange(spatial_data_train.shape[0]),

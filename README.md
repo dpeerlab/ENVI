@@ -35,7 +35,7 @@ and to get the model's outputs:
 st_data.obsm['envi_latent'] = ENVI_Model.spatial_data.obsm['envi_latent']
 st_data.obsm['COVET'] = ENVI_Model.spatial_data.obsm['COVET']
 st_data.obsm['COVET_SQRT'] = ENVI_Model.spatial_data.obsm['COVET_SQRT']
-st_data.uns['COVET_genes'] =  ENVI_Model.CovGenes
+st_data.uns['COVET_genes'] =  ENVI_Model.covet_genes
 
 st_data.obsm['imputation'] = ENVI_Model.spatial_data.obsm['imputation']
 
@@ -43,7 +43,7 @@ st_data.obsm['imputation'] = ENVI_Model.spatial_data.obsm['imputation']
 sc_data.obsm['envi_latent'] = ENVI_Model.sc_data.obsm['envi_latent']
 sc_data.obsm['COVET'] = ENVI_Model.sc_data.obsm['COVET']
 sc_data.obsm['COVET_SQRT'] = ENVI_Model.sc_data.obsm['COVET_SQRT']
-sc_data.uns['COVET_genes'] =  ENVI_Model.CovGenes
+sc_data.uns['COVET_genes'] =  ENVI_Model.covet_genes
 
 ```
 And To run COVET (just on spatial data):
