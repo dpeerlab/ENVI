@@ -284,8 +284,8 @@ def NormalKL(mean, log_std, agg=None):
     return tf.reduce_mean(KL, axis=-1)
 
 
-def log_pos_pdf(sample, l, agg=None):
-    log_prob = tfp.distributions.Poisson(rate=l).log_prob(sample)
+def log_pos_pdf(sample, rate, agg=None):
+    log_prob = tfp.distributions.Poisson(rate=rate).log_prob(sample)
     if agg is None:
         return log_prob
     if not isinstance(agg, (str)):
