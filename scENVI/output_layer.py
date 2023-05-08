@@ -100,21 +100,32 @@ class ENVIOutputLayer(tf.keras.layers.Layer):
         self.r = LinearLayer(units, input_dim, kernel_init, bias_init, name=name + "_r")
         self.init_dispersion_layers()
 
-    def init_dispersion_layers(self):
+    def dist_has_p(self, mode="spatial"):
         p_dists = ["zinb", "nb", "full_norm"]
-        d_dists = ["zinb"]
+        if self.comm_disp:
+            return self.spatial_dist in p_dists or self.sc_dist in p_dists
+        return getattr(self, mode + "_dist") in p_dists
 
-        if self.spatial_dist in p_dists:
+    def dist_has_d(self, mode="spatial"):
+        d_dists = ["zinb"]
+        if self.comm_disp:
+            return self.spatial_dist in d_dists or self.sc_dist in d_dists
+        return getattr(self, mode + "_dist") in d_dists
+
+    def init_dispersion_layers(self):
+        if self.dist_has_p("spatial"):
             self.p_spatial = self.init_layer(name="_p_spatial")
-            self.p_sc = self.p_spatial
-        if self.spatial_dist in d_dists:
+            if self.comm_disp:
+                self.p_sc = self.p_spatial
+        if self.dist_has_d("spatial"):
             self.d_spatial = self.init_layer(name="_d_spatial")
-            self.d_sc = self.d_spatial
+            if self.comm_disp:
+                self.d_sc = self.d_spatial
 
         if not self.comm_disp:
-            if self.sc_dist in p_dists:
+            if self.dist_has_p("sc"):
                 self.p_sc = self.init_layer(name="_p_sc")
-            if self.sc_dist in d_dists:
+            if self.dist_has_d("sc"):
                 self.d_sc = self.init_layer(name="_d_sc")
 
     def init_layer(self, name):
