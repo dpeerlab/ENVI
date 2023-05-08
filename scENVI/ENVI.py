@@ -523,21 +523,21 @@ class ENVI:
             log_std (array): log of the standard deviation for latent variable
         """
 
-        conf_const = 0 if mode == "spatial" else 1
+        confounder = 0 if mode == "spatial" else 1
         if self.log_input > 0:
             x = tf.math.log(x + self.log_input)
-        x_conf = tf.concat(
+        x_confounder = tf.concat(
             [
                 x,
                 tf.one_hot(
-                    conf_const * tf.ones(x.shape[0], dtype=tf.uint8),
+                    confounder * tf.ones(x.shape[0], dtype=tf.uint8),
                     2,
                     dtype=tf.keras.backend.floatx(),
                 ),
             ],
             axis=-1,
         )
-        return tf.split(self.encode_nn(x_conf), num_or_size_splits=2, axis=1)
+        return tf.split(self.encode_nn(x_confounder), num_or_size_splits=2, axis=1)
 
     @tf.function
     def exp_decode(self, x, mode="sc"):
