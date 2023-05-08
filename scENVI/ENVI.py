@@ -55,7 +55,7 @@ def COVET(data, k=8, g=64, genes=[], spatial_key="spatial", batch_key=-1, cov_pc
 class ENVI:
 
     """
-    ENVI Integrates spatial and single-cell data
+    ENVI integrates spatial and single-cell data
 
     Parameters:
         spatial_data (anndata): anndata with spatial data, with obsm 'spatial'
@@ -351,9 +351,9 @@ class ENVI:
             self.stable = stable
             self.init_scale = init_scale
 
-            self.enc_layers = []
-            self.dec_exp_layers = []
-            self.dec_cov_layers = []
+            self.encoder_layers = []
+            self.decoder_expression_layers = []
+            self.decoder_covet_layers = []
 
             self.initializer_layers = tf.keras.initializers.TruncatedNormal(
                 mean=0.0,
@@ -372,43 +372,43 @@ class ENVI:
             print("Initializing VAE")
 
             for i in range(self.num_layers - 1):
-                self.enc_layers.append(
+                self.encoder_layers.append(
                     tf.keras.layers.Dense(
                         units=self.num_neurons,
                         kernel_initializer=self.initializer_layers,
                         bias_initializer=self.initializer_layers,
-                        name="enc_" + str(i),
+                        name="encoder_" + str(i),
                     )
                 )
 
-                self.dec_exp_layers.append(
+                self.decoder_expression_layers.append(
                     tf.keras.layers.Dense(
                         units=self.num_neurons,
                         kernel_initializer=self.initializer_layers,
                         bias_initializer=self.initializer_layers,
-                        name="dec_exp_" + str(i),
+                        name="decoder_expression_" + str(i),
                     )
                 )
 
-                self.dec_cov_layers.append(
+                self.decoder_covet_layers.append(
                     tf.keras.layers.Dense(
                         units=self.num_neurons,
                         kernel_initializer=self.initializer_layers,
                         bias_initializer=self.initializer_layers,
-                        name="dec_cov_" + str(i),
+                        name="decoder_covet_" + str(i),
                     )
                 )
 
-            self.enc_layers.append(
+            self.encoder_layers.append(
                 tf.keras.layers.Dense(
                     units=2 * latent_dim,
                     kernel_initializer=self.initializer_enc,
                     bias_initializer=self.initializer_enc,
-                    name="enc_output",
+                    name="encoder_output",
                 )
             )
 
-            self.dec_exp_layers.append(
+            self.decoder_expression_layers.append(
                 output_layer.ENVIOutputLayer(
                     input_dim=self.num_neurons,
                     units=self.full_trans_gene_num,
@@ -418,16 +418,16 @@ class ENVI:
                     const_disp=self.const_disp,
                     kernel_init=self.initializer_output_exp,
                     bias_init=self.initializer_output_exp,
-                    name="dec_exp_output",
+                    name="decoder_expression_output",
                 )
             )
 
-            self.dec_cov_layers.append(
+            self.decoder_covet_layers.append(
                 tf.keras.layers.Dense(
                     units=int(self.cov_gene_num * (self.cov_gene_num + 1) / 2),
                     kernel_initializer=self.initializer_output_cov,
                     bias_initializer=self.initializer_output_cov,
-                    name="dec_cov_output",
+                    name="decoder_covet_output",
                 )
             )
 
@@ -462,11 +462,11 @@ class ENVI:
 
         Output = Input
         for i in range(self.num_layers - 1):
-            Output = self.enc_layers[i](Output) + (
+            Output = self.encoder_layers[i](Output) + (
                 Output if (i > 0 and self.skip) else 0
             )
             Output = tf.nn.leaky_relu(Output)
-        return self.enc_layers[-1](Output)
+        return self.encoder_layers[-1](Output)
 
     @tf.function
     def decode_exp_nn(self, Input):
@@ -483,7 +483,7 @@ class ENVI:
 
         Output = Input
         for i in range(self.num_layers - 1):
-            Output = self.dec_exp_layers[i](Output) + (
+            Output = self.decoder_expression_layers[i](Output) + (
                 Output if (i > 0 and self.skip) else 0
             )
             Output = tf.nn.leaky_relu(Output)
@@ -503,11 +503,11 @@ class ENVI:
         """
 
         for i in range(self.num_layers - 1):
-            Output = self.dec_cov_layers[i](Output) + (
+            Output = self.decoder_covet_layers[i](Output) + (
                 Output if (i > 0 and self.skip) else 0
             )
             Output = tf.nn.leaky_relu(Output)
-        return self.dec_cov_layers[-1](Output)
+        return self.decoder_covet_layers[-1](Output)
 
     @tf.function
     def encode(self, x, mode="sc"):
@@ -551,22 +551,24 @@ class ENVI:
         Return:
             Output paramterizations for chosen expression distributions
         """
-        conf_const = 0 if mode == "spatial" else 1
-        x_conf = tf.concat(
+        confounder = 0 if mode == "spatial" else 1
+        x_confounder = tf.concat(
             [
                 x,
                 tf.one_hot(
-                    conf_const * tf.ones(x.shape[0], dtype=tf.uint8),
+                    confounder * tf.ones(x.shape[0], dtype=tf.uint8),
                     2,
                     dtype=tf.keras.backend.floatx(),
                 ),
             ],
             axis=-1,
         )
-        DecOut = self.decode_exp_nn(x_conf)
+        decoder_output = self.decode_exp_nn(x_confounder)
 
         if getattr(self, mode + "_dist") == "zinb":
-            output_r, output_p, output_d = self.dec_exp_layers[-1](DecOut, mode)
+            output_r, output_p, output_d = self.decoder_expression_layers[-1](
+                decoder_output, mode
+            )
 
             return (
                 tf.nn.softplus(output_r) + self.stable,
@@ -574,17 +576,21 @@ class ENVI:
                 tf.nn.sigmoid(0.01 * output_d - 2),
             )
         if getattr(self, mode + "_dist") == "nb":
-            output_r, output_p = self.dec_exp_layers[-1](DecOut, mode)
+            output_r, output_p = self.decoder_expression_layers[-1](
+                decoder_output, mode
+            )
 
             return tf.nn.softplus(output_r) + self.stable, output_p
         if getattr(self, mode + "_dist") == "pois":
-            output_l = self.dec_exp_layers[-1](DecOut, mode)
+            output_l = self.decoder_expression_layers[-1](decoder_output, mode)
             return tf.nn.softplus(output_l) + self.stable
         if getattr(self, mode + "_dist") == "full_norm":
-            output_mu, output_logstd = self.dec_exp_layers[-1](DecOut, mode)
+            output_mu, output_logstd = self.decoder_expression_layers[-1](
+                decoder_output, mode
+            )
             return output_mu, output_logstd
         if getattr(self, mode + "_dist") == "norm":
-            output_mu = self.dec_exp_layers[-1](DecOut, mode)
+            output_mu = self.decoder_expression_layers[-1](decoder_output, mode)
             return output_mu
 
     @tf.function
@@ -614,7 +620,7 @@ class ENVI:
             return tf.matmul(TriMat, TriMat, transpose_b=True)
 
     @tf.function
-    def enc_mean(self, mean, logstd):
+    def encoder_mean(self, mean, logstd):
         """
         Returns posterior mean given latent parametrization, which is not the mean
             variable for a log_normal prior
@@ -633,7 +639,7 @@ class ENVI:
     @tf.function
     def reparameterize(self, mean, logstd):
         """
-        Samples from latent using te reparameterization trick
+        Samples from latent using the reparameterization trick
 
         Args:
             mean (array): latent mean parameter
@@ -1531,7 +1537,9 @@ class ENVI:
         if not hasattr(ENVI, "trainable_variables"):
             self.trainable_variables = []
             for ind, var in enumerate(
-                self.enc_layers + self.dec_exp_layers + self.dec_cov_layers
+                self.encoder_layers
+                + self.decoder_expression_layers
+                + self.decoder_covet_layers
             ):
                 self.trainable_variables = self.trainable_variables + var.weights
 
@@ -1693,9 +1701,9 @@ class ENVI:
                 "agg",
                 "init_scale",
                 "stable",
-                "enc_layers",
-                "dec_exp_layers",
-                "dec_cov_layers",
+                "encoder_layers",
+                "decoder_expression_layers",
+                "decoder_covet_layers",
             ]
 
             attribute_list = {attr: getattr(self, attr) for attr in attribute_name_list}
