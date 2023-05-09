@@ -316,7 +316,7 @@ class ENVI:
                 self.sc_data.uns["log_pc"] = self.sc_pc
                 self.sc_data.X = np.log(self.sc_data.X + self.sc_data.uns["log_pc"])
 
-            self.init_scale = np.abs(self.spatial_data.X).mean()
+            self.data_scale = np.abs(self.spatial_data.X).mean()
 
             if (
                 self.z_score
@@ -337,7 +337,7 @@ class ENVI:
                     self.sc_data.X - self.sc_data.var["mean"][None, :]
                 ) / self.sc_data.var["std"][None, :]
 
-                self.init_scale = 1
+                self.data_scale = 1
 
             self.stable = stable
             self.init_scale = init_scale
@@ -348,7 +348,7 @@ class ENVI:
 
             self.initializer_layers = tf.keras.initializers.TruncatedNormal(
                 mean=0.0,
-                stddev=np.sqrt(self.init_scale / self.num_neurons) / self.init_scale,
+                stddev=np.sqrt(self.init_scale / self.num_neurons) / self.data_scale,
             )
             self.initializer_enc = tf.keras.initializers.TruncatedNormal(
                 mean=0.0, stddev=np.sqrt(self.init_scale / self.num_neurons)
