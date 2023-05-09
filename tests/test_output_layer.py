@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 
-from scENVI.output_layer import LinearLayer, ConstantLayer, ENVIOutputLayer
+from output_layer import LinearLayer, ConstantLayer, ENVIOutputLayer
 
 # Test data
 input_dim = 5

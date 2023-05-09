@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 import scanpy as sc
 
-from scENVI.utils import (
+from utils import (
     batch_knn,
     get_niche_covariance,
     get_covet,
@@ -37,22 +37,22 @@ def test_batch_knn(sample_spatial_data):
 
 
 def test_get_niche_expression(sample_spatial_data):
-    kNN = 5
-    neigh_exp = get_niche_expression(sample_spatial_data, kNN)
-    assert neigh_exp.shape == (
-        sample_spatial_data.shape[0],
-        kNN,
-        sample_spatial_data.shape[1],
-    )
+    k = 5
+    n_cells, n_genes = sample_spatial_data.shape
+    neigh_exp = get_niche_expression(sample_spatial_data, k)
+    assert neigh_exp.shape == (n_cells, k, n_genes)
 
 
 def test_get_covet(sample_spatial_data):
-    kNN = 5
+    k = 5
     n_top_genes = 10
     sc.pp.highly_variable_genes(sample_spatial_data, n_top_genes=n_top_genes)
-    covet, knn_graph_index = get_covet(sample_spatial_data, kNN)
+    n_top_genes = sample_spatial_data.var[
+        "highly_variable"
+    ].sum()  # may be different than n_top_genes
+    covet, knn_graph_index = get_covet(sample_spatial_data, k)
     assert covet.shape == (sample_spatial_data.shape[0], n_top_genes, n_top_genes)
-    assert knn_graph_index.shape == (sample_spatial_data.shape[0], kNN)
+    assert knn_graph_index.shape == (sample_spatial_data.shape[0], k)
 
 
 def test_get_niche_covariance(sample_spatial_data):

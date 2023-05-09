@@ -92,7 +92,7 @@ class ENVIOutputLayer(tf.keras.layers.Layer):
         self.sc_dist = sc_dist
         self.share_disp = share_disp
         self.const_disp = const_disp
-        self.name = name
+        self._name = name
         self.kernel_init = kernel_init
         self.bias_init = bias_init
 
@@ -131,14 +131,14 @@ class ENVIOutputLayer(tf.keras.layers.Layer):
     def init_layer(self, name):
         if self.const_disp:
             return ConstantLayer(
-                self.units, self.input_dim, self.bias_init, name=self.name + name
+                self.units, self.input_dim, self.bias_init, name=self._name + name
             )
         return LinearLayer(
             self.units,
             self.input_dim,
             self.kernel_init,
             self.bias_init,
-            name=self.name + name,
+            name=self._name + name,
         )
 
     def call(self, inputs, mode="spatial"):

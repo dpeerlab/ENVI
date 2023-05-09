@@ -2,7 +2,6 @@
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
-
 [project]
 name = "scENVI"
 version = "0.1.0"
@@ -28,9 +27,11 @@ dependencies = [
     'pandas>=1.5.3',
 ]
 
-    
-    
 [project.urls]
 "Homepage" = "https://github.com/pypa/sampleproject"
 "Bug Tracker" = "https://github.com/pypa/sampleproject/issues"
 
+[tool.pytest.ini_options]
+pythonpath = [
+  "scENVI"
+]

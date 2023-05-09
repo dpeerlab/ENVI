@@ -74,7 +74,7 @@ def batch_knn(data, batch, k):
 
 
 def get_niche_expression(
-    spatial_data, kNN, spatial_key="spatial", batch_key=-1, data_key=None
+    spatial_data, k, spatial_key="spatial", batch_key=-1, data_key=None
 ):
     """
     Computing Niche mean expression based on cell expression and location
@@ -82,7 +82,7 @@ def get_niche_expression(
     Args:
         spatial_data (anndata): anndata with spatial data, with obsm 'spatial'
             indicating spatial location of spot/segmented cell
-        kNN (int): number of nearest neighbors to define niche
+        k (int): number of nearest neighbors to define niche
         spatial_key (str): obsm key name with physical location of spots/cells
             (default 'spatial')
         batch_key (str): obs key name of batch/sample of spatial data (default -1)
@@ -101,18 +101,18 @@ def get_niche_expression(
 
     if batch_key == -1:
         knn_graph = sklearn.neighbors.kneighbors_graph(
-            spatial_data.obsm[spatial_key], n_neighbors=kNN, mode="distance", n_jobs=-1
+            spatial_data.obsm[spatial_key], n_neighbors=k, mode="distance", n_jobs=-1
         ).tocoo()
         knn_graph = scipy.sparse.coo_matrix(
             (np.ones_like(knn_graph.data), (knn_graph.row, knn_graph.col)),
             shape=knn_graph.shape,
         )
         knn_graph_index = np.reshape(
-            np.asarray(knn_graph.col), [spatial_data.obsm[spatial_key].shape[0], kNN]
+            np.asarray(knn_graph.col), [spatial_data.obsm[spatial_key].shape[0], k]
         )
     else:
         knn_graph_index, _ = batch_knn(
-            spatial_data.obsm[spatial_key], spatial_data.obs[batch_key], kNN
+            spatial_data.obsm[spatial_key], spatial_data.obs[batch_key], k
         )
 
     return Data[knn_graph_index[np.arange(spatial_data.obsm[spatial_key].shape[0])]]
