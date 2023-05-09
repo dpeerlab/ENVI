@@ -67,7 +67,7 @@ def test_zinb_sc_envi_layer():
     assert d.shape == shape, f"Expected output shape {shape}, but got {d.shape}"
 
 
-def test_comm_disp_envi_layer():
+def test_share_disp_envi_layer():
     layer = ENVIOutputLayer(
         input_dim,
         units,
@@ -75,7 +75,7 @@ def test_comm_disp_envi_layer():
         bias_init,
         spatial_dist="nb",
         sc_dist="nb",
-        comm_disp=True,
+        share_disp=True,
         const_disp=False,
     )
     shape = (batch_size, units)
@@ -89,7 +89,7 @@ def test_comm_disp_envi_layer():
     assert np.array_equal(p, sc_p), "Spatial and single cell dispersion should be equal"
 
 
-def test_comm_disp_zinb_envi_layer():
+def test_share_disp_zinb_envi_layer():
     layer = ENVIOutputLayer(
         input_dim,
         units,
@@ -97,7 +97,7 @@ def test_comm_disp_zinb_envi_layer():
         bias_init,
         spatial_dist="zinb",
         sc_dist="nb",
-        comm_disp=True,
+        share_disp=True,
         const_disp=False,
     )
     shape = (batch_size, units)

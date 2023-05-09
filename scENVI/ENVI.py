@@ -82,7 +82,7 @@ class ENVI:
         cov_dist (str): distribution used to describe niche covariance from spatial data
             (default OT, could be 'OT', 'wish' or 'norm')
         prior_dist (str): prior distribution for latent (default normal)
-        comm_disp (bool): if True, spatial_dist and sc_dist share dispersion
+        share_disp (bool): if True, spatial_dist and sc_dist share dispersion
             parameter(s) (default False)
         const_disp (bool): if True, dispersion parameter(s) are only per gene
             rather there per gene per sample (default False)
@@ -142,7 +142,7 @@ class ENVI:
         cov_dist="OT",
         sc_dist="nb",
         prior_dist="norm",
-        comm_disp=False,
+        share_disp=False,
         const_disp=False,
         spatial_coeff=1,
         sc_coeff=1,
@@ -176,7 +176,7 @@ class ENVI:
             self.spatial_dist = spatial_dist
             self.cov_dist = cov_dist
             self.sc_dist = sc_dist
-            self.comm_disp = comm_disp
+            self.share_disp = share_disp
             self.const_disp = const_disp
 
             self.prior_dist = prior_dist
@@ -405,7 +405,7 @@ class ENVI:
                     units=self.full_trans_gene_num,
                     spatial_dist=self.spatial_dist,
                     sc_dist=self.sc_dist,
-                    comm_disp=self.comm_disp,
+                    share_disp=self.share_disp,
                     const_disp=self.const_disp,
                     kernel_init=self.initializer_output_exp,
                     bias_init=self.initializer_output_exp,
@@ -1699,7 +1699,7 @@ class ENVI:
                 "cov_dist",
                 "sc_dist",
                 "prior_dist",
-                "comm_disp",
+                "share_disp",
                 "const_disp",
                 "spatial_coeff",
                 "sc_coeff",
