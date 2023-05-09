@@ -664,7 +664,6 @@ class ENVI:
             sc_like: ENVI likelihood for single cell data
             kl: KL divergence between posterior latent and prior
         """
-
         mean_spatial, logstd_spatial = self.encode(
             spatial_sample[:, : self.overlap_num], mode="spatial"
         )
@@ -821,7 +820,7 @@ class ENVI:
         else:
             return cov_mat
 
-    def GetMeanSample(self, decode, mode="spatial"):
+    def get_mean_sample(self, decode, mode="spatial"):
         """
         Computes mean of expression distribution
 
@@ -1019,7 +1018,7 @@ class ENVI:
         if data is None:
             decode = np.concatenate(
                 [
-                    self.GetMeanSample(
+                    self.get_mean_sample(
                         self.expression_decode(
                             np.array_split(
                                 self.spatial_data.obsm["envi_latent"], num_div, axis=0
@@ -1054,7 +1053,7 @@ class ENVI:
 
             decode = np.concatenate(
                 [
-                    self.GetMeanSample(
+                    self.get_mean_sample(
                         self.expression_decode(
                             np.array_split(latent, num_div, axis=0)[i], mode="sc"
                         ),
@@ -1571,7 +1570,7 @@ class ENVI:
             self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
         return (spatial_like, cov_like, sc_like, kl, False)
 
-    def Train(
+    def train(
         self,
         lr=0.0001,
         batch_size=512,

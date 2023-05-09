@@ -10,3 +10,5 @@ scENVI.egg-info/SOURCES.txt
 scENVI.egg-info/dependency_links.txt
 scENVI.egg-info/requires.txt
 scENVI.egg-info/top_level.txt
+tests/test_output_layer.py
+tests/test_utils.py
