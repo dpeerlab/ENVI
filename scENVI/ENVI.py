@@ -169,12 +169,8 @@ class ENVI:
             self.sc_data = sc_data.copy()
             self.lib_size = lib_size
 
-            self.num_layers = (
-                kwargs["NumLayers"] if "NumLayers" in kwargs.keys() else num_layers
-            )
-            self.num_neurons = (
-                kwargs["NumNeurons"] if "NumNeurons" in kwargs.keys() else num_neurons
-            )
+            self.num_layers = num_layers
+            self.num_neurons = num_neurons
             self.latent_dim = latent_dim
 
             self.spatial_dist = spatial_dist
@@ -294,7 +290,11 @@ class ENVI:
             self.log_sc = False
 
             self.z_score = z_score
-            self.log_input = log_input
+            self.log_input = (
+                log_input
+                if log_input > -min(self.sc_data.X.min(), self.sc_data.X.min())
+                else 0
+            )
 
             if (
                 self.spatial_dist == "norm"
@@ -316,7 +316,7 @@ class ENVI:
                 self.sc_data.uns["log_pc"] = self.sc_pc
                 self.sc_data.X = np.log(self.sc_data.X + self.sc_data.uns["log_pc"])
 
-            self.InitScale = np.abs(self.spatial_data.X).mean()
+            self.init_scale = np.abs(self.spatial_data.X).mean()
 
             if (
                 self.z_score
@@ -337,14 +337,7 @@ class ENVI:
                     self.sc_data.X - self.sc_data.var["mean"][None, :]
                 ) / self.sc_data.var["std"][None, :]
 
-                self.InitScale = 1
-
-            if self.log_input > -min(self.sc_data.X.min(), self.sc_data.X.min()):
-                self.log_input = (
-                    kwargs["LogInput"] if "LogInput" in kwargs.keys() else log_input
-                )
-            else:
-                self.log_input = 0
+                self.init_scale = 1
 
             self.stable = stable
             self.init_scale = init_scale
@@ -355,7 +348,7 @@ class ENVI:
 
             self.initializer_layers = tf.keras.initializers.TruncatedNormal(
                 mean=0.0,
-                stddev=np.sqrt(self.init_scale / self.num_neurons) / self.InitScale,
+                stddev=np.sqrt(self.init_scale / self.num_neurons) / self.init_scale,
             )
             self.initializer_enc = tf.keras.initializers.TruncatedNormal(
                 mean=0.0, stddev=np.sqrt(self.init_scale / self.num_neurons)
