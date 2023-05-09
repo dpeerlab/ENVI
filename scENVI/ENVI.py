@@ -879,10 +879,10 @@ class ENVI:
                             self.spatial_data.X.astype(tf.keras.backend.floatx()),
                             num_div,
                             axis=0,
-                        )[_],
+                        )[i],
                         mode="spatial",
                     )[0].numpy()
-                    for _ in range(num_div)
+                    for i in range(num_div)
                 ],
                 axis=0,
             )
@@ -896,10 +896,10 @@ class ENVI:
                             ),
                             num_div,
                             axis=0,
-                        )[_],
+                        )[i],
                         mode="sc",
                     )[0].numpy()
-                    for _ in range(num_div)
+                    for i in range(num_div)
                 ],
                 axis=0,
             )
@@ -946,10 +946,10 @@ class ENVI:
                             ),
                             num_div,
                             axis=0,
-                        )[_],
+                        )[i],
                         mode=mode,
                     )[0].numpy()
-                    for _ in range(num_div)
+                    for i in range(num_div)
                 ],
                 axis=0,
             )
@@ -1023,12 +1023,12 @@ class ENVI:
                         self.expression_decode(
                             np.array_split(
                                 self.spatial_data.obsm["envi_latent"], num_div, axis=0
-                            )[_],
+                            )[i],
                             mode="sc",
                         ),
                         mode="sc",
                     ).numpy()
-                    for _ in range(num_div)
+                    for i in range(num_div)
                 ],
                 axis=0,
             )
@@ -1056,11 +1056,11 @@ class ENVI:
                 [
                     self.GetMeanSample(
                         self.expression_decode(
-                            np.array_split(latent, num_div, axis=0)[_], mode="sc"
+                            np.array_split(latent, num_div, axis=0)[i], mode="sc"
                         ),
                         mode="sc",
                     ).numpy()
-                    for _ in range(num_div)
+                    for i in range(num_div)
                 ],
                 axis=0,
             )
@@ -1105,9 +1105,9 @@ class ENVI:
                     self.cov_decode(
                         np.array_split(
                             self.sc_data.obsm["envi_latent"], num_div, axis=0
-                        )[_]
+                        )[i]
                     )
-                    for _ in range(num_div)
+                    for i in range(num_div)
                 ],
                 axis=0,
             )
@@ -1159,9 +1159,9 @@ class ENVI:
                 self.cov_decode(
                     np.array_split(
                         self.spatial_data.obsm["envi_latent"], num_div, axis=0
-                    )[_]
+                    )[i]
                 )
-                for _ in range(num_div)
+                for i in range(num_div)
             ],
             axis=0,
         )
@@ -1170,10 +1170,10 @@ class ENVI:
                 np.linalg.matrix_power(
                     np.array_split(
                         self.spatial_data.obsm["COVET_SQRT_envi"], num_div, axis=0
-                    )[_],
+                    )[i],
                     2,
                 )
-                for _ in range(num_div)
+                for i in range(num_div)
             ],
             axis=0,
         )
