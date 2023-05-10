@@ -1,0 +1,4 @@
+jupyter
+colorcet
+harmony
+pytest
