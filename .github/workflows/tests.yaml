@@ -35,5 +35,4 @@ jobs:
           pip install -r requirements.dev.txt
 
       - name: Run PyTest
-        working-directory: backend
         run: pytest
