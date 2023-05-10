@@ -50,7 +50,7 @@ sc_data.uns['COVET_genes'] =  envi_model.covet_genes
 And To run COVET (just on spatial data):
 
 ```
-ENVI.covet(st_data, k = 8, g = 64, spatial_key = 'spatial')
+ENVI.covet(st_data, k=8, g=64, spatial_key='spatial')
 ```
 
 COVET information will be in:
