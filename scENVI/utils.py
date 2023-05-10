@@ -118,17 +118,17 @@ def get_niche_expression(
     return Data[knn_graph_index[np.arange(spatial_data.obsm[spatial_key].shape[0])]]
 
 
-def get_covet(
+def compute_covet(
     spatial_data,
     k,
     spatial_key="spatial",
     batch_key=-1,
     mean_expression=None,
     weighted=False,
-    cov_pc=1,
+    covet_pseudocount=1,
 ):
     """
-    Wrapper to compute niche covariance based on cell expression and location
+    Wrapper to compute COVET based on cell expression and location
 
     Args:
         spatial_data (anndata): anndata with spatial data, with obsm 'spatial'
@@ -137,16 +137,16 @@ def get_covet(
         spatial_key (str): obsm key name with physical location of spots/cells
             (default 'spatial')
         batch_key (str): obs key name of batch/sample of spatial data (default -1)
-        mean_expression (np.array): expression vector to shift niche covariance with
-        weighted (bool): if True, weights covariance by spatial distance
+        mean_expression (np.array): expression vector to shift COVET with
+        weighted (bool): if True, weights COVET by spatial distance
     Return:
-        covet: niche covariance matrices
+        covet: COVET matrices
         knn_graph_index: indices of nearest spatial neighbors per cell
     """
     expression_data = spatial_data[:, spatial_data.var.highly_variable].X
 
-    if cov_pc > 0:
-        expression_data = np.log(expression_data + cov_pc)
+    if covet_pseudocount > 0:
+        expression_data = np.log(expression_data + covet_pseudocount)
 
     if batch_key == -1 or batch_key not in spatial_data.obs.columns:
         knn_graph = sklearn.neighbors.kneighbors_graph(
@@ -203,26 +203,33 @@ def get_covet(
     return (covet, knn_graph_index)
 
 
-def get_niche_covariance(
-    spatial_data, k, g, genes, cov_dist, spatial_key="spatial", batch_key=-1, cov_pc=1
+def get_covet(
+    spatial_data,
+    k,
+    g,
+    genes,
+    covet_distribution,
+    spatial_key="spatial",
+    batch_key=-1,
+    covet_pseudocount=1,
 ):
     """
-    Compute niche covariance matrices for spatial data
+    Compute COVET matrices for spatial data
 
     Args:
         spatial_data (anndata): anndata with spatial data, with obsm 'spatial'
             indicating spatial location of spot/segmented cell
         k (int): number of nearest neighbors to define niche
-        g (int): number of HVG to compute niche covariance matrices
-        genes (list of str): list of genes to keep for niche covariance
-        cov_dist (str): distribution to transform niche covariance matrices to fit into
+        g (int): number of HVG to compute COVET matrices
+        genes (list of str): list of genes to keep for COVET
+        covet_distribution (str): distribution to transform COVET matrices to fit into
         batch_key (str): obs key for batch information (default -1, for no batch)
 
     Return:
-        covet: raw, untransformed niche covariance matrices
-        covet_sqrt: covariance matrices transformed into chosen cov_dist
+        covet: raw, untransformed COVET matrices
+        covet_sqrt: COVET transformed for covet_distribution
         niche_expression: Average gene expression in niche
-        covet_genes: Genes used for niche covariance
+        covet_genes: Genes used for COVET
     """
 
     spatial_data.layers["log"] = np.log(spatial_data.X + 1)
@@ -240,22 +247,22 @@ def get_niche_covariance(
     covet_gene_set = np.where(np.asarray(spatial_data.var.highly_variable))[0]
     covet_genes = spatial_data.var_names[covet_gene_set]
 
-    covet, knn_graph_index = get_covet(
+    covet, knn_graph_index = compute_covet(
         spatial_data,
         k,
         spatial_key=spatial_key,
         batch_key=batch_key,
         weighted=False,
-        cov_pc=cov_pc,
+        covet_pseudocount=covet_pseudocount,
     )
     niche_expression = spatial_data.X[knn_graph_index[np.arange(spatial_data.shape[0])]]
 
-    if cov_dist == "norm":
+    if covet_distribution == "norm":
         covet_sqrt = covet.reshape([covet.shape[0], -1])
         covet_sqrt = (
             covet_sqrt - covet_sqrt.mean(axis=0, keepdims=True)
         ) / covet_sqrt.std(axis=0, keepdims=True)
-    if cov_dist == "OT":
+    if covet_distribution == "OT":
         covet_sqrt = matrix_square_root(covet)
     else:
         covet_sqrt = np.copy(covet)

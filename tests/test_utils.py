@@ -5,7 +5,7 @@ import scanpy as sc
 
 from utils import (
     batch_knn,
-    get_niche_covariance,
+    compute_covet,
     get_covet,
     get_niche_expression,
     matrix_square_root,
@@ -43,28 +43,28 @@ def test_get_niche_expression(sample_spatial_data):
     assert neigh_exp.shape == (n_cells, k, n_genes)
 
 
-def test_get_covet(sample_spatial_data):
+def test_compute_covet(sample_spatial_data):
     k = 5
     n_top_genes = 10
     sc.pp.highly_variable_genes(sample_spatial_data, n_top_genes=n_top_genes)
     n_top_genes = sample_spatial_data.var[
         "highly_variable"
     ].sum()  # may be different than n_top_genes
-    covet, knn_graph_index = get_covet(sample_spatial_data, k)
+    covet, knn_graph_index = compute_covet(sample_spatial_data, k)
     assert covet.shape == (sample_spatial_data.shape[0], n_top_genes, n_top_genes)
     assert knn_graph_index.shape == (sample_spatial_data.shape[0], k)
 
 
-def test_get_niche_covariance(sample_spatial_data):
+def test_get_covet(sample_spatial_data):
     k = 5
     g = 20
     genes = []
     n_cells, n_genes = sample_spatial_data.shape
-    cov_dist = "norm"
-    covet, covet_sqrt, niche_mat, cov_genes = get_niche_covariance(
-        sample_spatial_data, k, g, genes, cov_dist
+    covet_distribution = "norm"
+    covet, covet_sqrt, niche_mat, covet_genes = get_covet(
+        sample_spatial_data, k, g, genes, covet_distribution
     )
     assert covet.shape == (n_cells, g, g)
     assert covet_sqrt.shape == (n_cells, g, g)
     assert niche_mat.shape == (n_cells, k, n_genes)
-    assert cov_genes.shape[0] == g
+    assert covet_genes.shape[0] == g

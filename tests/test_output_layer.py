@@ -37,7 +37,12 @@ def test_constant_layer():
 # Test ENVIOutputLayer
 def test_envi_output_layer():
     layer = ENVIOutputLayer(
-        input_dim, units, kernel_init, bias_init, spatial_dist="pois", sc_dist="nb"
+        input_dim,
+        units,
+        kernel_init,
+        bias_init,
+        spatial_distribution="pois",
+        sc_distribution="nb",
     )
     r = layer(input_data)
     assert r.shape == (
@@ -48,7 +53,12 @@ def test_envi_output_layer():
 
 def test_negative_binomial_sc_envi_layer():
     layer = ENVIOutputLayer(
-        input_dim, units, kernel_init, bias_init, spatial_dist="pois", sc_dist="nb"
+        input_dim,
+        units,
+        kernel_init,
+        bias_init,
+        spatial_distribution="pois",
+        sc_distribution="nb",
     )
     r, p = layer(input_data, mode="sc")
     shape = (batch_size, units)
@@ -58,7 +68,12 @@ def test_negative_binomial_sc_envi_layer():
 
 def test_zinb_sc_envi_layer():
     layer = ENVIOutputLayer(
-        input_dim, units, kernel_init, bias_init, spatial_dist="pois", sc_dist="zinb"
+        input_dim,
+        units,
+        kernel_init,
+        bias_init,
+        spatial_distribution="pois",
+        sc_distribution="zinb",
     )
     r, p, d = layer(input_data, mode="sc")
     shape = (batch_size, units)
@@ -67,16 +82,16 @@ def test_zinb_sc_envi_layer():
     assert d.shape == shape, f"Expected output shape {shape}, but got {d.shape}"
 
 
-def test_share_disp_envi_layer():
+def test_share_dispersion_envi_layer():
     layer = ENVIOutputLayer(
         input_dim,
         units,
         kernel_init,
         bias_init,
-        spatial_dist="nb",
-        sc_dist="nb",
-        share_disp=True,
-        const_disp=False,
+        spatial_distribution="nb",
+        sc_distribution="nb",
+        share_dispersion=True,
+        const_dispersion=False,
     )
     shape = (batch_size, units)
     r, p = layer(input_data, mode="spatial")
@@ -89,16 +104,16 @@ def test_share_disp_envi_layer():
     assert np.array_equal(p, sc_p), "Spatial and single cell dispersion should be equal"
 
 
-def test_share_disp_zinb_envi_layer():
+def test_share_dispersion_zinb_envi_layer():
     layer = ENVIOutputLayer(
         input_dim,
         units,
         kernel_init,
         bias_init,
-        spatial_dist="zinb",
-        sc_dist="nb",
-        share_disp=True,
-        const_disp=False,
+        spatial_distribution="zinb",
+        sc_distribution="nb",
+        share_dispersion=True,
+        const_dispersion=False,
     )
     shape = (batch_size, units)
     r, p, d = layer(input_data, mode="spatial")

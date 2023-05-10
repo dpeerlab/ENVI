@@ -12,29 +12,29 @@ from scENVI import utils
 from scENVI import output_layer
 
 
-def covet(data, k=8, g=64, genes=[], spatial_key="spatial", batch_key=-1, cov_pc=1):
+def covet(
+    data, k=8, g=64, genes=[], spatial_key="spatial", batch_key=-1, covet_pseudocount=1
+):
     """
-    Compute niche covariance matrices for spatial data
+    Computes COVET matrices for spatial data.
+    Adds COVET and COVET_SQRT to data.obsm and COVET_Genes to data.uns
 
     Args:
         spatial_data (anndata): anndata with spatial data, with obsm 'spatial'
             indicating spatial location of spot/segmented cell
-        k (int): number of nearest neighbors to define niche
-        g (int): number of HVG to compute niche covariance matrices
-        genes (list of str): list of genes to keep for niche covariance
-            (if empty, just uses HVG)
+        k (int): number of nearest neighbors in niche
+        g (int): number of highly variable genes to use for COVET
+        genes (list of str): list of genes to use for COVET
+            (if empty, uses g highly variable genes)
         batch_key (str): obs key for batch information (default -1, for no batch)
-        cov_pc (float): log pseudo-count for COVET computation
+        covet_pseudocount (float): log pseudo-count for COVET computation
             (if 0, use unlogged values)
 
-    Return:
-        COVET: raw, untransformed niche covariance matrices
-        COVET_SQRT: covariance matrices transformed into chosen cov_dist
-        niche_expression: Average gene expression in niche
-        covet_genes: Genes used for niche covariance
+    Returns:
+        updated AnnData object with COVET and COVET_SQRT in obsm and COVET_Genes in uns
     """
 
-    covet, covet_sqrt, _, covet_genes = utils.get_niche_covariance(
+    covet, covet_sqrt, _, covet_genes = utils.get_covet(
         data,
         k,
         g,
@@ -42,7 +42,7 @@ def covet(data, k=8, g=64, genes=[], spatial_key="spatial", batch_key=-1, cov_pc
         "OT",
         spatial_key=spatial_key,
         batch_key=batch_key,
-        cov_pc=cov_pc,
+        covet_pseudocount=covet_pseudocount,
     )
 
     data.obsm["COVET"] = covet.astype("float32")
@@ -65,63 +65,59 @@ class ENVI:
             (default 'spatial')
         batch_key (str): obs key name of batch/sample of spatial data
             (default 'batch' if exists on .obs, set -1 to ignore)
-        num_layers (int): number of neural network for decoders and encoders (default 3)
+        num_layers (int): number of layers for decoders and encoders (default 3)
         num_neurons (int): number of neurons in each layer (default 1024)
         latent_dim (int): size of ENVI latent dimension (size 512)
-        k_nearest (int): number of physical neighbors to describe niche (default 8)
-        num_cov_genes (int): number of HVGs to compute niche covariance
+        k_nearest (int): number of nearest neighbors to describe niche (default 8)
+        num_covet_genes (int): number of HVGs to compute COVET
             with default (64), if -1 takes all genes
-        cov_genes (list of str): manual genes to compute niche with (default [])
+        covet_genes (list of str): manual genes to compute niche with (default [])
         num_HVG (int): number of HVGs to keep for single cell data (default 2048),
             if -1 takes all genes
         sc_genes (list of str): manual genes to keep for single cell data (default [])
-        spatial_dist (str): distribution used to describe spatial data
+        spatial_distribution (str): distribution used to describe spatial data
             (default pois, could be 'pois', 'nb', 'zinb', 'norm' or 'full_norm')
-        sc_dist (str): distribution used to describe single cell data
+        sc_distribution (str): distribution used to describe single cell data
             (default nb, could be 'pois', 'nb', 'zinb', 'norm' or 'full_norm')
-        cov_dist (str): distribution used to describe niche covariance from spatial data
+        covet_distribution (str): distance metric used for COVET matrices
             (default OT, could be 'OT', 'wish' or 'norm')
-        prior_dist (str): prior distribution for latent (default normal)
-        share_disp (bool): if True, spatial_dist and sc_dist share dispersion
-            parameter(s) (default False)
-        const_disp (bool): if True, dispersion parameter(s) are only per gene
+        prior_distribution (str): prior distribution for latent (default normal)
+        share_dispersion (bool): whether to share dispersion parameters between
+            spatial_distribution and sc_distribution (default False)
+        const_dispersion (bool): if True, dispersion parameter(s) are only per gene
             rather there per gene per sample (default False)
-        spatial_coeff (float): coefficient for spatial expression loss in total ELBO
+        spatial_weight (float): coefficient for spatial expression loss in total ELBO
             (default 1.0)
-        sc_coeff (float): coefficient for single cell expression loss in total ELBO
+        sc_weight (float): coefficient for single cell expression loss in total ELBO
             (default 1.0)
-        cov_coeff (float): coefficient for spatial niche loss in total ELBO
+        covet_weight (float): coefficient for spatial niche loss in total ELBO
             (default 1.0)
-        kl_coeff (float): coefficient for latent prior loss in total ELBO (default 1.0)
-        skip (bool): if True, neural network has skip connections (default True)
+        kl_weight (float): coefficient for latent prior loss in total ELBO (default 1.0)
+        skip (bool): whether to use skip connections in encoder and decoder networks
+            (default True)
         log_input (float): if larger than zero, a log is applied to input with
             pseudocount of log_input (default 0.0)
-        cov_pc (float): if larger than zero, log is applied to spatial_data with
-            pseudocount spatial_pc for calculation of spatial covariance (default 1.0)
-        spatial_pc (float): if larger than zero, log is applied to spatial_data with
-            pseudocount spatial_pc (default 0.0)
-        sc_pc (float): if larger than zero, log is applied to spatial_data with
-            pseudocount spatial_pc (default 0.0)
-        lib_size (float or Bool) = if true, performs median library size
+        covet_pseudocount (float): pseudocount to add to spatial_data when
+            computing COVET. Only used when positive. (default 1.0)
+        spatial_pseudocount (float): pseudocount to add to spatial_data.
+            Only used when positive. (default 1.0)
+        sc_pseudocount (float): pseudocount to add to sc_data.
+            Only used when positive. (default 1.0)
+        library_size (float or Bool) = if true, performs median library size
             if number, normalize library size to it
             if False does nothing (default False)
-        z_score (float): if True and spatial/sc_dist are 'norm' or 'full_norm',
+        z_score (float): if True and spatial/sc_distribution are 'norm' or 'full_norm',
             spatial and single cell data are z-scored (default False)
         agg (str or np.array): aggregation function of loss factors,
-                               'mean' will average across neurons,
-                               'sum' will sum across neurons (makes a difference because
-                                different number of genes for spatial and single cell
-                                data),
-                                var will take a per-gene average weighed by elements in
-                                anndata.var[var]
-        init_scale_out (float): scale for VarianceScaling normalization for output layer
-            (default 0.1)
-        init_scale_enc (float): scale for VarianceScaling normalization for
-            encoding layer, (default 0.1)
-        init_scale_layer (float): scale for VarianceScaling normalization for
-            regular layers, (default 0.1)
-        stable (float): pseudo count for Rate Parameter for Log Likelihood to
-            stabilize training
+            'mean' will average across neurons,
+            'sum' will sum across neurons (makes a difference because
+            different number of genes for spatial and single cell
+            data),
+            var will take a per-gene average weighed by elements in anndata.var[var]
+        init_scale (float): scale for VarianceScaling normalization of
+            initial layer parameters (default 1.0)
+        stable (float): pseudocount for rate parameter to stabilize training
+            (default 0.0)
     """
 
     def __init__(
@@ -134,27 +130,27 @@ class ENVI:
         num_neurons=1024,
         latent_dim=512,
         k_nearest=8,
-        num_cov_genes=64,
-        cov_genes=[],
+        num_covet_genes=64,
+        covet_genes=[],
         num_HVG=2048,
         sc_genes=[],
-        spatial_dist="pois",
-        cov_dist="OT",
-        sc_dist="nb",
-        prior_dist="norm",
-        share_disp=False,
-        const_disp=False,
-        spatial_coeff=1,
-        sc_coeff=1,
-        cov_coeff=1,
-        kl_coeff=0.3,
+        spatial_distribution="pois",
+        covet_distribution="OT",
+        sc_distribution="nb",
+        prior_distribution="norm",
+        share_dispersion=False,
+        const_dispersion=False,
+        spatial_weight=1,
+        sc_weight=1,
+        covet_weight=1,
+        kl_weight=0.3,
         skip=True,
         log_input=0.0,
-        cov_pc=1,
-        spatial_pc=-1,
-        sc_pc=-1,
+        covet_pseudocount=1,
+        spatial_pseudocount=-1,
+        sc_pseudocount=-1,
         z_score=False,
-        lib_size=False,
+        library_size=False,
         agg="mean",
         init_scale=0.1,
         stable=0.0,
@@ -167,24 +163,24 @@ class ENVI:
         if load_path is None:
             self.spatial_data = spatial_data.copy()
             self.sc_data = sc_data.copy()
-            self.lib_size = lib_size
+            self.library_size = library_size
 
             self.num_layers = num_layers
             self.num_neurons = num_neurons
             self.latent_dim = latent_dim
 
-            self.spatial_dist = spatial_dist
-            self.cov_dist = cov_dist
-            self.sc_dist = sc_dist
-            self.share_disp = share_disp
-            self.const_disp = const_disp
+            self.spatial_distribution = spatial_distribution
+            self.covet_distribution = covet_distribution
+            self.sc_distribution = sc_distribution
+            self.share_dispersion = share_dispersion
+            self.const_dispersion = const_dispersion
 
-            self.prior_dist = prior_dist
+            self.prior_distribution = prior_distribution
 
-            self.spatial_coeff = spatial_coeff
-            self.sc_coeff = sc_coeff
-            self.cov_coeff = cov_coeff
-            self.kl_coeff = kl_coeff
+            self.spatial_weight = spatial_weight
+            self.sc_weight = sc_weight
+            self.covet_weight = covet_weight
+            self.kl_weight = kl_weight
             self.skip = skip
             self.agg = agg
 
@@ -231,8 +227,8 @@ class ENVI:
                 :, list(self.overlap_genes) + list(self.non_overlap_genes)
             ]
 
-            if self.lib_size:
-                if isinstance(self.lib_size, bool):
+            if self.library_size:
+                if isinstance(self.library_size, bool):
                     sc.pp.normalize_total(
                         self.sc_data,
                         target_sum=np.median(self.sc_data.X.sum(axis=1)),
@@ -240,7 +236,7 @@ class ENVI:
                     )
                 else:
                     sc.pp.normalize_total(
-                        self.sc_data, target_sum=self.lib_size, inplace=True
+                        self.sc_data, target_sum=self.library_size, inplace=True
                     )
 
             self.k_nearest = k_nearest
@@ -252,29 +248,29 @@ class ENVI:
                 self.batch_key = -1
             print("Computing COVET Matrices")
 
-            self.num_cov_genes = min(num_cov_genes, self.spatial_data.shape[-1])
-            self.cov_genes = cov_genes
-            self.cov_pc = cov_pc
+            self.num_covet_genes = min(num_covet_genes, self.spatial_data.shape[-1])
+            self.covet_genes = covet_genes
+            self.covet_pseudocount = covet_pseudocount
 
             (
                 self.spatial_data.obsm["COVET"],
                 self.spatial_data.obsm["COVET_SQRT"],
                 self.spatial_data.obsm["NicheMat"],
                 self.covet_genes,
-            ) = utils.get_niche_covariance(
+            ) = utils.get_covet(
                 self.spatial_data,
                 self.k_nearest,
-                self.num_cov_genes,
-                self.cov_genes,
-                self.cov_dist,
+                self.num_covet_genes,
+                self.covet_genes,
+                self.covet_distribution,
                 spatial_key=self.spatial_key,
                 batch_key=self.batch_key,
-                cov_pc=self.cov_pc,
+                covet_pseudocount=self.covet_pseudocount,
             )
 
-            self.overlap_num = self.overlap_genes.shape[0]
-            self.cov_gene_num = self.spatial_data.obsm["COVET_SQRT"].shape[-1]
-            self.full_trans_gene_num = self.sc_data.shape[-1]
+            self.n_overlap_genes = self.overlap_genes.shape[0]
+            self.n_covet_genes = self.spatial_data.obsm["COVET_SQRT"].shape[-1]
+            self.n_whole_transcriptome_genes = self.sc_data.shape[-1]
 
             if (self.agg != "sum") and (self.agg != "mean"):
                 self.agg_spatial = self.spatial_data.var[self.agg].astype("float32")
@@ -283,8 +279,8 @@ class ENVI:
                 self.agg_spatial = self.agg
                 self.agg_sc = self.agg
 
-            self.spatial_pc = spatial_pc
-            self.sc_pc = sc_pc
+            self.spatial_pseudocount = spatial_pseudocount
+            self.sc_pseudocount = sc_pseudocount
 
             self.log_spatial = False
             self.log_sc = False
@@ -297,31 +293,39 @@ class ENVI:
             )
 
             if (
-                self.spatial_dist == "norm"
-                or self.spatial_dist == "full_norm"
-                and self.spatial_pc > 0
-            ) or (self.spatial_pc > (1 - self.spatial_data.X.min())):
+                self.spatial_distribution == "norm"
+                or self.spatial_distribution == "full_norm"
+                and self.spatial_pseudocount > 0
+            ) or (self.spatial_pseudocount > (1 - self.spatial_data.X.min())):
                 self.log_spatial = True
-                self.spatial_pc = self.spatial_pc
-                self.spatial_data.uns["log_pc"] = self.spatial_pc
+                self.spatial_pseudocount = self.spatial_pseudocount
+                self.spatial_data.uns["log_pc"] = self.spatial_pseudocount
                 self.spatial_data.X = np.log(
                     self.spatial_data.X + self.spatial_data.uns["log_pc"]
                 )
 
             if (
-                self.sc_dist == "norm" or self.sc_dist == "full_norm" and self.sc_pc > 0
-            ) or (self.sc_pc > (1 - self.sc_data.X.min())):
+                self.sc_distribution == "norm"
+                or self.sc_distribution == "full_norm"
+                and self.sc_pseudocount > 0
+            ) or (self.sc_pseudocount > (1 - self.sc_data.X.min())):
                 self.log_sc = True
-                self.sc_pc = self.sc_pc
-                self.sc_data.uns["log_pc"] = self.sc_pc
+                self.sc_pseudocount = self.sc_pseudocount
+                self.sc_data.uns["log_pc"] = self.sc_pseudocount
                 self.sc_data.X = np.log(self.sc_data.X + self.sc_data.uns["log_pc"])
 
             self.data_scale = np.abs(self.spatial_data.X).mean()
 
             if (
                 self.z_score
-                and (self.sc_dist == "norm" or self.sc_dist == "full_norm")
-                and (self.spatial_dist == "norm" or self.spatial_dist == "full_norm")
+                and (
+                    self.sc_distribution == "norm"
+                    or self.sc_distribution == "full_norm"
+                )
+                and (
+                    self.spatial_distribution == "norm"
+                    or self.spatial_distribution == "full_norm"
+                )
             ):
                 self.spatial_data.var["mean"] = self.spatial_data.X.mean(axis=0)
                 self.spatial_data.var["std"] = self.spatial_data.X.std(axis=0)
@@ -350,13 +354,13 @@ class ENVI:
                 mean=0.0,
                 stddev=np.sqrt(self.init_scale / self.num_neurons) / self.data_scale,
             )
-            self.initializer_enc = tf.keras.initializers.TruncatedNormal(
+            self.initializer_encoder = tf.keras.initializers.TruncatedNormal(
                 mean=0.0, stddev=np.sqrt(self.init_scale / self.num_neurons)
             )
-            self.initializer_output_cov = tf.keras.initializers.TruncatedNormal(
+            self.initializer_output_covet = tf.keras.initializers.TruncatedNormal(
                 mean=0.0, stddev=np.sqrt(self.init_scale / self.num_neurons)
             )
-            self.initializer_output_exp = tf.keras.initializers.TruncatedNormal(
+            self.initializer_output_expression = tf.keras.initializers.TruncatedNormal(
                 mean=0.0, stddev=np.sqrt(self.init_scale / self.overlap_genes.shape[0])
             )
 
@@ -393,8 +397,8 @@ class ENVI:
             self.encoder_layers.append(
                 tf.keras.layers.Dense(
                     units=2 * latent_dim,
-                    kernel_initializer=self.initializer_enc,
-                    bias_initializer=self.initializer_enc,
+                    kernel_initializer=self.initializer_encoder,
+                    bias_initializer=self.initializer_encoder,
                     name="encoder_output",
                 )
             )
@@ -402,22 +406,22 @@ class ENVI:
             self.decoder_expression_layers.append(
                 output_layer.ENVIOutputLayer(
                     input_dim=self.num_neurons,
-                    units=self.full_trans_gene_num,
-                    spatial_dist=self.spatial_dist,
-                    sc_dist=self.sc_dist,
-                    share_disp=self.share_disp,
-                    const_disp=self.const_disp,
-                    kernel_init=self.initializer_output_exp,
-                    bias_init=self.initializer_output_exp,
+                    units=self.n_whole_transcriptome_genes,
+                    spatial_distribution=self.spatial_distribution,
+                    sc_distribution=self.sc_distribution,
+                    share_dispersion=self.share_dispersion,
+                    const_dispersion=self.const_dispersion,
+                    kernel_init=self.initializer_output_expression,
+                    bias_init=self.initializer_output_expression,
                     name="decoder_expression_output",
                 )
             )
 
             self.decoder_covet_layers.append(
                 tf.keras.layers.Dense(
-                    units=int(self.cov_gene_num * (self.cov_gene_num + 1) / 2),
-                    kernel_initializer=self.initializer_output_cov,
-                    bias_initializer=self.initializer_output_cov,
+                    units=int(self.n_covet_genes * (self.n_covet_genes + 1) / 2),
+                    kernel_initializer=self.initializer_output_covet,
+                    bias_initializer=self.initializer_output_covet,
                     name="decoder_covet_output",
                 )
             )
@@ -585,28 +589,28 @@ class ENVI:
             return output_mu
 
     @tf.function
-    def cov_decode(self, x):
+    def covet_decode(self, x):
         """
         Generates an output distribution for niche data
 
         Args:
-            x (array): input to covariance decoder (size of latent dimension)
+            x (array): input to COVET decoder (size of latent dimension)
 
         Return:
             Output paramterizations for chosen niche distributions
         """
 
         DecOut = self.decode_cov_nn(x)
-        if self.cov_dist == "wish":
+        if self.covet_distribution == "wish":
             TriMat = tfp.math.fill_triangular(DecOut)
             TriMat = tf.linalg.set_diag(
                 TriMat, tf.math.softplus(tf.linalg.diag_part(TriMat))
             )
             return TriMat
-        elif self.cov_dist == "norm":
+        elif self.covet_distribution == "norm":
             TriMat = tfp.math.fill_triangular(DecOut)
             return 0.5 * TriMat + 0.5 * tf.tranpose(TriMat, [0, 2, 1])
-        elif self.cov_dist == "OT":
+        elif self.covet_distribution == "OT":
             TriMat = tfp.math.fill_triangular(DecOut)
             return tf.matmul(TriMat, TriMat, transpose_b=True)
 
@@ -622,9 +626,9 @@ class ENVI:
         Return:
             Posterior mean for latent
         """
-        if self.prior_dist == "norm":
+        if self.prior_distribution == "norm":
             return mean
-        elif self.prior_dist == "log_norm":
+        elif self.prior_distribution == "log_norm":
             return tf.exp(mean + tf.square(tf.exp(logstd)) / 2)
 
     @tf.function
@@ -643,9 +647,9 @@ class ENVI:
             * tf.exp(logstd)
             + mean
         )
-        if self.prior_dist == "norm":
+        if self.prior_distribution == "norm":
             return reparm
-        elif self.prior_dist == "log_norm":
+        elif self.prior_distribution == "log_norm":
             return tf.exp(reparm)
 
     @tf.function
@@ -655,28 +659,30 @@ class ENVI:
 
         Args:
             spatial_sample (np.array or tf.tensor): spatial expression data sample/batch
-            cov_sample (np.array or tf.tensor): niche covariance data sample/batch
+            cov_sample (np.array or tf.tensor): COVET data sample/batch
             sc_sample (np.array or tf.tensor): single cell data sample/batch subsetted
                 to spatial genes
         Return:
-            spatial_like: ENVI likelihood for spatial expression
-            cov_like: ENVI likelihood for covariance data
-            sc_like: ENVI likelihood for single cell data
+            spatial_likelihood: ENVI likelihood for spatial expression
+            covet_likelihood: ENVI likelihood for COVET data
+            sc_likelihood: ENVI likelihood for single cell data
             kl: KL divergence between posterior latent and prior
         """
         mean_spatial, logstd_spatial = self.encode(
-            spatial_sample[:, : self.overlap_num], mode="spatial"
+            spatial_sample[:, : self.n_overlap_genes], mode="spatial"
         )
-        mean_sc, logstd_sc = self.encode(sc_sample[:, : self.overlap_num], mode="sc")
+        mean_sc, logstd_sc = self.encode(
+            sc_sample[:, : self.n_overlap_genes], mode="sc"
+        )
 
         z_spatial = self.reparameterize(mean_spatial, logstd_spatial)
         z_sc = self.reparameterize(mean_sc, logstd_sc)
 
-        if self.spatial_dist == "zinb":
+        if self.spatial_distribution == "zinb":
             spatial_r, spatial_p, spatial_d = self.expression_decode(
                 z_spatial, mode="spatial"
             )
-            spatial_like = tf.reduce_mean(
+            spatial_likelihood = tf.reduce_mean(
                 utils.log_zinb_pdf(
                     spatial_sample,
                     spatial_r[:, : spatial_sample.shape[-1]],
@@ -686,9 +692,9 @@ class ENVI:
                 ),
                 axis=0,
             )
-        if self.spatial_dist == "nb":
+        if self.spatial_distribution == "nb":
             spatial_r, spatial_p = self.expression_decode(z_spatial, mode="spatial")
-            spatial_like = tf.reduce_mean(
+            spatial_likelihood = tf.reduce_mean(
                 utils.log_nb_pdf(
                     spatial_sample,
                     spatial_r[:, : spatial_sample.shape[-1]],
@@ -697,9 +703,9 @@ class ENVI:
                 ),
                 axis=0,
             )
-        if self.spatial_dist == "pois":
+        if self.spatial_distribution == "pois":
             spatial_l = self.expression_decode(z_spatial, mode="spatial")
-            spatial_like = tf.reduce_mean(
+            spatial_likelihood = tf.reduce_mean(
                 utils.log_pos_pdf(
                     spatial_sample,
                     spatial_l[:, : spatial_sample.shape[-1]],
@@ -707,11 +713,11 @@ class ENVI:
                 ),
                 axis=0,
             )
-        if self.spatial_dist == "full_norm":
+        if self.spatial_distribution == "full_norm":
             spatial_mu, spatial_logstd = self.expression_decode(
                 z_spatial, mode="spatial"
             )
-            spatial_like = tf.reduce_mean(
+            spatial_likelihood = tf.reduce_mean(
                 utils.log_normal_pdf(
                     spatial_sample,
                     spatial_mu[:, : spatial_sample.shape[-1]],
@@ -720,9 +726,9 @@ class ENVI:
                 ),
                 axis=0,
             )
-        if self.spatial_dist == "norm":
+        if self.spatial_distribution == "norm":
             spatial_mu = self.expression_decode(z_spatial, mode="spatial")
-            spatial_like = tf.reduce_mean(
+            spatial_likelihood = tf.reduce_mean(
                 utils.log_normal_pdf(
                     spatial_sample,
                     spatial_mu[:, : spatial_sample.shape[-1]],
@@ -732,45 +738,45 @@ class ENVI:
                 axis=0,
             )
 
-        if self.sc_dist == "zinb":
+        if self.sc_distribution == "zinb":
             sc_r, sc_p, sc_d = self.expression_decode(z_sc, mode="sc")
-            sc_like = tf.reduce_mean(
+            sc_likelihood = tf.reduce_mean(
                 utils.log_zinb_pdf(sc_sample, sc_r, sc_p, sc_d, agg=self.agg_sc), axis=0
             )
-        if self.sc_dist == "nb":
+        if self.sc_distribution == "nb":
             sc_r, sc_p = self.expression_decode(z_sc, mode="sc")
-            sc_like = tf.reduce_mean(
+            sc_likelihood = tf.reduce_mean(
                 utils.log_nb_pdf(sc_sample, sc_r, sc_p, agg=self.agg_sc), axis=0
             )
-        if self.sc_dist == "pois":
+        if self.sc_distribution == "pois":
             sc_l = self.expression_decode(z_sc, mode="sc")
-            sc_like = tf.reduce_mean(
+            sc_likelihood = tf.reduce_mean(
                 utils.log_pos_pdf(sc_sample, sc_l, agg=self.agg_sc), axis=0
             )
-        if self.sc_dist == "full_norm":
+        if self.sc_distribution == "full_norm":
             sc_mu, sc_std = self.expression_decode(z_sc, mode="sc")
-            sc_like = tf.reduce_mean(
+            sc_likelihood = tf.reduce_mean(
                 utils.log_normal_pdf(sc_sample, sc_mu, sc_std, agg=self.agg_sc), axis=0
             )
-        if self.sc_dist == "norm":
+        if self.sc_distribution == "norm":
             sc_mu = self.expression_decode(z_sc, mode="sc")
-            sc_like = tf.reduce_mean(
+            sc_likelihood = tf.reduce_mean(
                 utils.log_normal_pdf(
                     sc_sample, sc_mu, tf.zeros_like(sc_sample), agg=self.agg_sc
                 ),
                 axis=0,
             )
 
-        if self.cov_dist == "wish":
-            cov_mu = self.cov_decode(z_spatial)
-            cov_like = tf.reduce_mean(
+        if self.covet_distribution == "wish":
+            cov_mu = self.covet_decode(z_spatial)
+            covet_likelihood = tf.reduce_mean(
                 utils.log_wish_pdf(cov_sample, cov_mu, agg=self.agg), axis=0
             )
-        elif self.cov_dist == "norm":
+        elif self.covet_distribution == "norm":
             cov_mu = tf.reshape(
-                self.cov_decode(z_spatial), [spatial_sample.shape[0], -1]
+                self.covet_decode(z_spatial), [spatial_sample.shape[0], -1]
             )
-            cov_like = tf.reduce_mean(
+            covet_likelihood = tf.reduce_mean(
                 utils.log_normal_pdf(
                     tf.reshape(cov_sample, [cov_sample.shape[0], -1]),
                     cov_mu,
@@ -779,20 +785,20 @@ class ENVI:
                 ),
                 axis=0,
             )
-        elif self.cov_dist == "OT":
-            cov_mu = self.cov_decode(z_spatial)
-            cov_like = tf.reduce_mean(
+        elif self.covet_distribution == "OT":
+            cov_mu = self.covet_decode(z_spatial)
+            covet_likelihood = tf.reduce_mean(
                 utils.ot_distance(cov_sample, cov_mu, agg=self.agg), axis=0
             )
 
-        if self.prior_dist == "norm":
+        if self.prior_distribution == "norm":
             kl_spatial = tf.reduce_mean(
                 utils.normal_kl(mean_spatial, logstd_spatial, agg=self.agg), axis=0
             )
             kl_sc = tf.reduce_mean(
                 utils.normal_kl(mean_sc, logstd_sc, agg=self.agg), axis=0
             )
-        elif self.prior_dist == "log_norm":
+        elif self.prior_distribution == "log_norm":
             kl_spatial = tf.reduce_mean(
                 utils.log_normal_kl(mean_spatial, logstd_spatial, agg=self.agg), axis=0
             )
@@ -802,23 +808,23 @@ class ENVI:
 
         kl = 0.5 * kl_spatial + 0.5 * kl_sc
 
-        return (spatial_like, cov_like, sc_like, kl)
+        return (spatial_likelihood, covet_likelihood, sc_likelihood, kl)
 
-    def get_niche_covarianceMean(self, cov_mat):
+    def get_covet_mean(self, covet):
         """
-        Reconstructs true covariance (untransformed)
+        Untransforms COVET based on which distribution we are using
 
         Args:
-            cov_mat (array/tensor): transformed covariance matrices to untransform
+            covet (array/tensor): transformed COVET matrix to untransform
         Return:
-            untransform covariance matrices
+            original COVET matrix
         """
-        if self.cov_dist == "wish":
-            return cov_mat * tf.sqrt(cov_mat.shape[-1])
-        elif self.cov_dist == "OT":
-            return tf.mamtul(cov_mat, cov_mat)
+        if self.covet_distribution == "wish":
+            return covet * tf.sqrt(covet.shape[-1])
+        elif self.covet_distribution == "OT":
+            return tf.mamtul(covet, covet)
         else:
-            return cov_mat
+            return covet
 
     def get_mean_sample(self, decode, mode="spatial"):
         """
@@ -1088,12 +1094,11 @@ class ENVI:
 
     def infer_covet(self, num_div=16, data=None):
         """
-        Infer covariance niche composition for single cell data
+        Infer COVET for single cell data
 
         Args:
             num_div (int): number of splits for forward pass to allow to fit in gpu
-            revert (bool): if True, computes actual covariance,
-                if False, computes transformed covariance (default False)
+            data (anndata): if not None, use this data instead of ENVI.sc_data
         Return:
             no return, adds 'COVET_SQRT' or 'COVET' to ENVI.sc_data.obsm
         """
@@ -1101,7 +1106,7 @@ class ENVI:
         if data is None:
             self.sc_data.obsm["COVET_SQRT"] = np.concatenate(
                 [
-                    self.cov_decode(
+                    self.covet_decode(
                         np.array_split(
                             self.sc_data.obsm["envi_latent"], num_div, axis=0
                         )[i]
@@ -1126,7 +1131,7 @@ class ENVI:
             latent = self.latent_rep(data=data, mode="sc")
             covet_sqrt = np.concatenate(
                 [
-                    self.cov_decode(np.array_split(latent, num_div, axis=0)[i])
+                    self.covet_decode(np.array_split(latent, num_div, axis=0)[i])
                     for i in range(num_div)
                 ],
                 axis=0,
@@ -1144,7 +1149,7 @@ class ENVI:
 
     def infer_covet_spatial(self, num_div=16):
         """
-        Reconstruct covariance niche composition for spatial data
+        Reconstruct COVET for spatial data
 
         Args:
             num_div (int): number of splits for forward pass to allow to fit in gpu
@@ -1155,7 +1160,7 @@ class ENVI:
 
         self.spatial_data.obsm["COVET_SQRT_envi"] = np.concatenate(
             [
-                self.cov_decode(
+                self.covet_decode(
                     np.array_split(
                         self.spatial_data.obsm["envi_latent"], num_div, axis=0
                     )[i]
@@ -1189,9 +1194,10 @@ class ENVI:
     ):
         """
         Infer niche composition for single cell data
+        and add 'niche_by_type' to ENVI.sc_data.obsm
 
         Args:
-            k (float): k for kNN regression on covariance matrices (default 32)
+            k (float): k for kNN regression on COVET matrices (default 32)
             niche_key (str): spatial obsm key to reconstruct niche from
                 (default 'cell_type')
             pred_key (str): spatial & single cell obsm key to split up kNN regression by
@@ -1199,12 +1205,10 @@ class ENVI:
             gpu (bool): if True, uses gpu for kNN regression (default False)
             norm_reg (bool): if True, cell type enrichment in normalized by the number
                 of cells per type (default False)
-            cluster (bool): if True, clusters covariance data and produces niche based
+            cluster (bool): if True, clusters COVET and produces niche based
                 on average across cluster, k is parameter for phenograph (default False)
             res (float): resolution parameter for leiden clustering in phenograph
                 (default 0.5)
-
-            no return, adds 'niche_by_type' to ENVI.sc_data.obsm
         """
 
         #        print(cluster)
@@ -1217,13 +1221,13 @@ class ENVI:
         spatial_cell_type_encoding = label_encoding.transform(
             self.spatial_data.obs[niche_key]
         )
-        self.spatial_data.obsm[niche_key + "_enc"] = spatial_cell_type_encoding
-        CellTypeName = label_encoding.classes_
+        self.spatial_data.obsm[niche_key + "_encoding"] = spatial_cell_type_encoding
+        cell_type_name = label_encoding.classes_
 
         neighbor_cell_type = utils.get_niche_expression(
             self.spatial_data,
             self.k_nearest,
-            data_key=(niche_key + "_enc"),
+            data_key=(niche_key + "_encoding"),
             spatial_key=self.spatial_key,
             batch_key=self.batch_key,
         )
@@ -1231,7 +1235,9 @@ class ENVI:
         neighbor_cell_type = neighbor_cell_type.sum(axis=1).astype("float32")
 
         self.spatial_data.obsm["niche_by_type"] = pd.DataFrame(
-            neighbor_cell_type, columns=CellTypeName, index=self.spatial_data.obs_names
+            neighbor_cell_type,
+            columns=cell_type_name,
+            index=self.spatial_data.obs_names,
         )
 
         if cluster:
@@ -1248,7 +1254,7 @@ class ENVI:
 
                 if norm_reg:
                     neighbor_fit = neighbor_fit / self.spatial_data.obsm[
-                        "cell_type_enc"
+                        "cell_type_encoding"
                     ].sum(axis=0, keepdims=True)
                     neighbor_fit = (
                         neighbor_fit
@@ -1283,7 +1289,7 @@ class ENVI:
                     pred_niche = avg_niche[phenoclusters_pred]
 
                     self.sc_data.obsm["niche_by_type"] = pd.DataFrame(
-                        pred_niche, columns=CellTypeName, index=self.sc_data.obs_names
+                        pred_niche, columns=cell_type_name, index=self.sc_data.obs_names
                     )
                 else:
                     import sklearn.neighbors
@@ -1295,14 +1301,16 @@ class ENVI:
                     regressor.fit(
                         covet_fit.reshape([covet_fit.shape[0], -1]), neighbor_fit
                     )
-                    NeighPred = regressor.predict(
+                    predicted_niche = regressor.predict(
                         covet_pred.reshape([covet_pred.shape[0], -1])
                     )
                     self.sc_data.obsm["niche_by_type"] = pd.DataFrame(
-                        NeighPred, columns=CellTypeName, index=self.sc_data.obs_names
+                        predicted_niche,
+                        columns=cell_type_name,
+                        index=self.sc_data.obs_names,
                     )
             else:
-                NeighPred = np.zeros(
+                predicted_niche = np.zeros(
                     shape=(self.sc_data.shape[0], neighbor_cell_type.shape[-1])
                 )
                 for val in np.unique(self.sc_data.obs[pred_key]):
@@ -1321,7 +1329,7 @@ class ENVI:
 
                     if norm_reg:
                         neighbor_fit = neighbor_fit / self.spatial_data.obsm[
-                            "cell_type_enc"
+                            "cell_type_encoding"
                         ].sum(axis=0, keepdims=True)
                         neighbor_fit = (
                             neighbor_fit
@@ -1353,7 +1361,7 @@ class ENVI:
                                 for clust in np.arange(phenoclusters.max() + 1)
                             ]
                         )
-                        NeighPred[self.sc_data.obs[pred_key] == val] = avg_niche[
+                        predicted_niche[self.sc_data.obs[pred_key] == val] = avg_niche[
                             phenoclusters_pred
                         ]
 
@@ -1367,27 +1375,29 @@ class ENVI:
                         regressor.fit(
                             covet_fit.reshape([covet_fit.shape[0], -1]), neighbor_fit
                         )
-                        NeighPred[
+                        predicted_niche[
                             self.sc_data.obs[pred_key] == val
                         ] = regressor.predict(
                             covet_pred.reshape([covet_pred.shape[0], -1])
                         )
 
                 self.sc_data.obsm["niche_by_type"] = pd.DataFrame(
-                    NeighPred, columns=CellTypeName, index=self.sc_data.obs_names
+                    predicted_niche,
+                    columns=cell_type_name,
+                    index=self.sc_data.obs_names,
                 )
         else:
-            sc_cov_mats = self.infer_covet(16, False, data)
+            sc_covet = self.infer_covet(16, False, data)
 
             if pred_key is None:
                 covet_fit = self.spatial_data.obsm["COVET_SQRT"]
-                covet_pred = sc_cov_mats
+                covet_pred = sc_covet
 
                 neighbor_fit = self.spatial_data.obsm["niche_by_type"]
 
                 if norm_reg:
                     neighbor_fit = neighbor_fit / self.spatial_data.obsm[
-                        "cell_type_enc"
+                        "cell_type_encoding"
                     ].sum(axis=0, keepdims=True)
                     neighbor_fit = (
                         neighbor_fit
@@ -1422,7 +1432,7 @@ class ENVI:
                     pred_niche = avg_niche[phenoclusters_pred]
 
                     niche_by_type = pd.DataFrame(
-                        pred_niche, columns=CellTypeName, index=self.sc_data.obs_names
+                        pred_niche, columns=cell_type_name, index=self.sc_data.obs_names
                     )
                 else:
                     import sklearn.neighbors
@@ -1434,21 +1444,21 @@ class ENVI:
                     regressor.fit(
                         covet_fit.reshape([covet_fit.shape[0], -1]), neighbor_fit
                     )
-                    NeighPred = regressor.predict(
+                    predicted_niche = regressor.predict(
                         covet_pred.reshape([covet_pred.shape[0], -1])
                     )
                     niche_by_type = pd.DataFrame(
-                        NeighPred, columns=CellTypeName, index=data.obs_names
+                        predicted_niche, columns=cell_type_name, index=data.obs_names
                     )
             else:
-                NeighPred = np.zeros(
+                predicted_niche = np.zeros(
                     shape=(data.shape[0], neighbor_cell_type.shape[-1])
                 )
                 for val in np.unique(self.sc_data.obs[pred_key]):
                     covet_fit = self.spatial_data.obsm["COVET_SQRT"][
                         self.spatial_data.obs[pred_key] == val
                     ]
-                    covet_pred = sc_cov_mats[data.obs[pred_key] == val]
+                    covet_pred = sc_covet[data.obs[pred_key] == val]
 
                     neighbor_fit = np.asarray(
                         self.spatial_data.obsm["niche_by_type"][
@@ -1458,7 +1468,7 @@ class ENVI:
 
                     if norm_reg:
                         neighbor_fit = neighbor_fit / self.spatial_data.obsm[
-                            "cell_type_enc"
+                            "cell_type_encoding"
                         ].sum(axis=0, keepdims=True)
                         neighbor_fit = (
                             neighbor_fit
@@ -1490,7 +1500,7 @@ class ENVI:
                                 for clust in np.arange(phenoclusters.max() + 1)
                             ]
                         )
-                        NeighPred[data.obs[pred_key] == val] = avg_niche[
+                        predicted_niche[data.obs[pred_key] == val] = avg_niche[
                             phenoclusters_pred
                         ]
 
@@ -1504,12 +1514,12 @@ class ENVI:
                         regressor.fit(
                             covet_fit.reshape([covet_fit.shape[0], -1]), neighbor_fit
                         )
-                        NeighPred[data.obs[pred_key] == val] = regressor.predict(
+                        predicted_niche[data.obs[pred_key] == val] = regressor.predict(
                             covet_pred.reshape([covet_pred.shape[0], -1])
                         )
 
                 niche_by_type = pd.DataFrame(
-                    NeighPred, columns=CellTypeName, index=data.obs_names
+                    predicted_niche, columns=cell_type_name, index=data.obs_names
                 )
 
             return niche_by_type
@@ -1524,31 +1534,31 @@ class ENVI:
 
         Args:
             spatial_sample (np.array or tf.tensor): spatial expression data sample/batch
-            cov_sample (np.array or tf.tensor): niche covariance data sample/batch
+            cov_sample (np.array or tf.tensor): COVET data sample/batch
             sc_sample (np.array or tf.tensor): single cell data sample/batch subsetted
                 to spatial genes
         Return:
-            spatial_like: ENVI likelihood for spatial expression
-            cov_like: ENVI likelihood for covariance data
-            sc_like: ENVI likelihood for single cell data
+            spatial_likelihood: ENVI likelihood for spatial expression
+            covet_likelihood: ENVI likelihood for COVET data
+            sc_likelihood: ENVI likelihood for single cell data
             kl: KL divergence between posterior latent and prior
             nan: True if any factor in loss was nan and doesn't apply gradients
         """
 
         with tf.GradientTape() as tape:
-            spatial_like, cov_like, sc_like, kl = self.compute_loss(
+            spatial_likelihood, covet_likelihood, sc_likelihood, kl = self.compute_loss(
                 spatial_sample, cov_sample, sc_sample
             )
             loss = (
-                -self.spatial_coeff * spatial_like
-                - self.sc_coeff * sc_like
-                - self.cov_coeff * cov_like
-                + 2 * self.kl_coeff * kl
+                -self.spatial_weight * spatial_likelihood
+                - self.sc_weight * sc_likelihood
+                - self.covet_weight * covet_likelihood
+                + 2 * self.kl_weight * kl
             )
 
         if not hasattr(ENVI, "trainable_variables"):
             self.trainable_variables = []
-            for ind, var in enumerate(
+            for _, var in enumerate(
                 self.encoder_layers
                 + self.decoder_expression_layers
                 + self.decoder_covet_layers
@@ -1565,10 +1575,10 @@ class ENVI:
         #     nan = True
 
         if nan:
-            return (spatial_like, cov_like, sc_like, kl, True)
+            return (spatial_likelihood, covet_likelihood, sc_likelihood, kl, True)
         else:
             self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
-        return (spatial_like, cov_like, sc_like, kl, False)
+        return (spatial_likelihood, covet_likelihood, sc_likelihood, kl, False)
 
     def train(
         self,
@@ -1685,31 +1695,31 @@ class ENVI:
                 "num_neurons",
                 "latent_dim",
                 "k_nearest",
-                "num_cov_genes",
-                "overlap_num",
-                "cov_gene_num",
-                "full_trans_gene_num",
+                "num_covet_genes",
+                "n_overlap_genes",
+                "n_covet_genes",
+                "n_whole_transcriptome_genes",
                 "log_spatial",
                 "log_sc",
-                "cov_genes",
+                "covet_genes",
                 "num_HVG",
                 "sc_genes",
-                "spatial_dist",
-                "cov_dist",
-                "sc_dist",
-                "prior_dist",
-                "share_disp",
-                "const_disp",
-                "spatial_coeff",
-                "sc_coeff",
-                "kl_coeff",
+                "spatial_distribution",
+                "covet_distribution",
+                "sc_distribution",
+                "prior_distribution",
+                "share_dispersion",
+                "const_dispersion",
+                "spatial_weight",
+                "sc_weight",
+                "kl_weight",
                 "skip",
                 "log_input",
-                "cov_pc",
-                "spatial_pc",
-                "sc_pc",
+                "covet_pseudocount",
+                "spatial_pseudocount",
+                "sc_pseudocount",
                 "z_score",
-                "lib_size",
+                "library_size",
                 "agg",
                 "init_scale",
                 "stable",

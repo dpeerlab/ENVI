@@ -36,9 +36,9 @@ class ConstantLayer(tf.keras.layers.Layer):
         units (int): number of neurons in the layer
         input_dim (int): layer input dimension
         bias_init (keras initializer): initializer of layer biases
-        share_disp (bool): whether the spatial and single cell distributions share
+        share_dispersion (bool): whether the spatial and single cell distributions share
             dispersion parameters
-        const_disp (bool): whether dispersion parameters are inferred per gene
+        const_dispersion (bool): whether dispersion parameters are inferred per gene
             instead of per (gene, sample) pair
     """
 
@@ -66,9 +66,9 @@ class ENVIOutputLayer(tf.keras.layers.Layer):
         input_dim (int): layer input dimension
         kernel_init (keras initializer): initializer for layer weights
         bias_init (keras initializer): initializer of layer biases
-        spatial_dist (str): variational distribution for spatial data
+        spatial_distribution (str): variational distribution for spatial data
             (default pois, could be 'pois', 'nb', 'zinb', 'norm' or 'full_norm')
-        sc_dist (str): variational distribution for single cell data
+        sc_distribution (str): variational distribution for single cell data
             (default nb, could be 'pois', 'nb', 'zinb', 'norm' or 'full_norm')
     """
 
@@ -78,20 +78,20 @@ class ENVIOutputLayer(tf.keras.layers.Layer):
         units,
         kernel_init,
         bias_init,
-        spatial_dist="pois",
-        sc_dist="nb",
-        share_disp=False,
-        const_disp=False,
+        spatial_distribution="pois",
+        sc_distribution="nb",
+        share_dispersion=False,
+        const_dispersion=False,
         name="dec_exp_output",
     ):
         super(ENVIOutputLayer, self).__init__()
 
         self.input_dim = input_dim
         self.units = units
-        self.spatial_dist = spatial_dist
-        self.sc_dist = sc_dist
-        self.share_disp = share_disp
-        self.const_disp = const_disp
+        self.spatial_distribution = spatial_distribution
+        self.sc_distribution = sc_distribution
+        self.share_dispersion = share_dispersion
+        self.const_dispersion = const_dispersion
         self._name = name
         self.kernel_init = kernel_init
         self.bias_init = bias_init
@@ -102,34 +102,38 @@ class ENVIOutputLayer(tf.keras.layers.Layer):
 
     def dist_has_p(self, mode="spatial"):
         p_dists = ["zinb", "nb", "full_norm"]
-        if self.share_disp:
-            return self.spatial_dist in p_dists or self.sc_dist in p_dists
+        if self.share_dispersion:
+            return (
+                self.spatial_distribution in p_dists or self.sc_distribution in p_dists
+            )
         return getattr(self, mode + "_dist") in p_dists
 
     def dist_has_d(self, mode="spatial"):
         d_dists = ["zinb"]
-        if self.share_disp:
-            return self.spatial_dist in d_dists or self.sc_dist in d_dists
+        if self.share_dispersion:
+            return (
+                self.spatial_distribution in d_dists or self.sc_distribution in d_dists
+            )
         return getattr(self, mode + "_dist") in d_dists
 
     def init_dispersion_layers(self):
         if self.dist_has_p("spatial"):
             self.p_spatial = self.init_layer(name="_p_spatial")
-            if self.share_disp:
+            if self.share_dispersion:
                 self.p_sc = self.p_spatial
         if self.dist_has_d("spatial"):
             self.d_spatial = self.init_layer(name="_d_spatial")
-            if self.share_disp:
+            if self.share_dispersion:
                 self.d_sc = self.d_spatial
 
-        if not self.share_disp:
+        if not self.share_dispersion:
             if self.dist_has_p("sc"):
                 self.p_sc = self.init_layer(name="_p_sc")
             if self.dist_has_d("sc"):
                 self.d_sc = self.init_layer(name="_d_sc")
 
     def init_layer(self, name):
-        if self.const_disp:
+        if self.const_dispersion:
             return ConstantLayer(
                 self.units, self.input_dim, self.bias_init, name=self._name + name
             )
