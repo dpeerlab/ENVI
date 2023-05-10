@@ -560,7 +560,7 @@ class ENVI:
         )
         decoder_output = self.decode_expression_nn(x_confounder)
 
-        if getattr(self, mode + "_dist") == "zinb":
+        if getattr(self, mode + "_distribution") == "zinb":
             output_r, output_p, output_d = self.decoder_expression_layers[-1](
                 decoder_output, mode
             )
@@ -570,21 +570,21 @@ class ENVI:
                 output_p,
                 tf.nn.sigmoid(0.01 * output_d - 2),
             )
-        if getattr(self, mode + "_dist") == "nb":
+        if getattr(self, mode + "_distribution") == "nb":
             output_r, output_p = self.decoder_expression_layers[-1](
                 decoder_output, mode
             )
 
             return tf.nn.softplus(output_r) + self.stable, output_p
-        if getattr(self, mode + "_dist") == "pois":
+        if getattr(self, mode + "_distribution") == "pois":
             output_l = self.decoder_expression_layers[-1](decoder_output, mode)
             return tf.nn.softplus(output_l) + self.stable
-        if getattr(self, mode + "_dist") == "full_norm":
+        if getattr(self, mode + "_distribution") == "full_norm":
             output_mu, output_logstd = self.decoder_expression_layers[-1](
                 decoder_output, mode
             )
             return output_mu, output_logstd
-        if getattr(self, mode + "_dist") == "norm":
+        if getattr(self, mode + "_distribution") == "norm":
             output_mu = self.decoder_expression_layers[-1](decoder_output, mode)
             return output_mu
 
@@ -837,16 +837,16 @@ class ENVI:
         Return:
             distribution mean from parameterization
         """
-        if getattr(self, mode + "_dist") == "zinb":
+        if getattr(self, mode + "_distribution") == "zinb":
             return decode[0] * tf.exp(decode[1]) * (1 - decode[2])
-        elif getattr(self, mode + "_dist") == "nb":
+        elif getattr(self, mode + "_distribution") == "nb":
             # return(decode[0])
             return decode[0] * tf.exp(decode[1])
-        elif getattr(self, mode + "_dist") == "pois":
+        elif getattr(self, mode + "_distribution") == "pois":
             return decode
-        elif getattr(self, mode + "_dist") == "full_norm":
+        elif getattr(self, mode + "_distribution") == "full_norm":
             return decode[0]
-        elif getattr(self, mode + "_dist") == "norm":
+        elif getattr(self, mode + "_distribution") == "norm":
             return decode
 
     def cluster_rep(self):

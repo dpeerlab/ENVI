@@ -106,7 +106,7 @@ class ENVIOutputLayer(tf.keras.layers.Layer):
             return (
                 self.spatial_distribution in p_dists or self.sc_distribution in p_dists
             )
-        return getattr(self, mode + "_dist") in p_dists
+        return getattr(self, mode + "_distribution") in p_dists
 
     def dist_has_d(self, mode="spatial"):
         d_dists = ["zinb"]
@@ -114,7 +114,7 @@ class ENVIOutputLayer(tf.keras.layers.Layer):
             return (
                 self.spatial_distribution in d_dists or self.sc_distribution in d_dists
             )
-        return getattr(self, mode + "_dist") in d_dists
+        return getattr(self, mode + "_distribution") in d_dists
 
     def init_dispersion_layers(self):
         if self.dist_has_p("spatial"):
@@ -148,12 +148,12 @@ class ENVIOutputLayer(tf.keras.layers.Layer):
     def call(self, inputs, mode="spatial"):
         r = self.r(inputs)
 
-        if getattr(self, mode + "_dist") == "zinb":
+        if getattr(self, mode + "_distribution") == "zinb":
             p = getattr(self, "p_" + mode)(inputs)
             d = getattr(self, "d_" + mode)(inputs)
             return (r, p, d)
 
-        if getattr(self, mode + "_dist") in ["nb", "full_norm"]:
+        if getattr(self, mode + "_distribution") in ["nb", "full_norm"]:
             p = getattr(self, "p_" + mode)(inputs)
             return (r, p)
 
