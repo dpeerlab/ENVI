@@ -2,9 +2,7 @@ ENVI & COVET
 ======================
 
 
-ENVI is a deep learnining based variational inference method to integrate scRNAseq with spatial sequencing data. 
-It creates a combined latent space for both data modalities, from which missing gene can be imputed from spatial data, cell types labels can be transfered
-and the spatial niche can be reconstructed for the dissociated scRNAseq data
+ENVI is a deep learnining based variational inference method to integrate scRNA-seq with spatial transcriptomics data. ENVI learns to reconstruct spatial onto for dissociated scRNA-seq data and impute unimagd genes onto spatial data.
 
 This implementation is written in Python3 and relies on jax, flax, sklearn, scipy and scanpy.  
 
