@@ -1,4 +1,4 @@
-PyENVI for Python3
+ENVI & COVET
 ======================
 
 
