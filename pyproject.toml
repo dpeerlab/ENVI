@@ -9,6 +9,8 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.9"
 flax = "^0.8.2"
+chex = "^0.1.85"
+optax = "^0.2.1"
 tensorflow_probability = "^0.22.0"
 clu = "^0.0.10"
 tqdm = "^4.66.1"
