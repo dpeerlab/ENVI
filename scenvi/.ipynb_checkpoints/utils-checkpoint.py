@@ -226,7 +226,8 @@ def compute_covet(spatial_data, k = 8, g = 64, genes = [], spatial_key = 'spatia
             spatial_data.layers['log'] = np.log(spatial_data.X+1)
             sc.pp.highly_variable_genes(spatial_data, n_top_genes = g, layer = 'log')
         
-        CovGenes = spatial_data.var_names[spatial_data.var.highly_variable]
+        
+        CovGenes = np.asarray(spatial_data.var_names[spatial_data.var.highly_variable])
         if(len(genes) > 0):
             CovGenes = np.union1d(CovGenes, genes)
     
@@ -234,6 +235,6 @@ def compute_covet(spatial_data, k = 8, g = 64, genes = [], spatial_key = 'spatia
     CovMatsTransformed = MatSqrt(CovMats)
 
     
-    return(CovMats.astype('float32'), CovMatsTransformed.astype('float32'), CovGenes)
+    return(CovMats.astype('float32'), CovMatsTransformed.astype('float32'), np.asarray(CovGenes).astype('str'))
 
 
