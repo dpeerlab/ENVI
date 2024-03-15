@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "scenvi"
-version = "0.2.7"
+version = "0.2.8"
 description = "Integration of scRNA-seq and spatial transcriptomics data"
 authors = ["Doron Haviv"]
 license = "MIT"
