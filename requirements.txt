@@ -1,0 +1,6 @@
+flax >= "0.8.2"
+optax >= "0.2.1"
+chex >= "0.1.81"
+tensorflow_probability >= "0.22.0"
+clu >= "0.0.11"
+tqdm >= "4.66.1"
