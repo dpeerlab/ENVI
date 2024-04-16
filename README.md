@@ -39,6 +39,5 @@ To run ENVI:
     
 And to just compute COVET for spatial data:
 
-
     st_data.obsm['COVET'], st_data.obsm['COVET_SQRT'], st_data.uns['CovGenes'] = scenvi.compute_covet(st_data)
         
