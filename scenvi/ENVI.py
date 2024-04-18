@@ -109,6 +109,9 @@ class ENVI():
         self.spatial_data = self.spatial_data[:, list(self.overlap_genes)]
         self.sc_data = self.sc_data[:, list(self.overlap_genes) + list(self.non_overlap_genes)]
         
+        if batch_key not in spatial_data.obs.columns:
+            batch_key = -1
+            
         self.k_nearest = k_nearest
         self.spatial_key = spatial_key
         self.batch_key = batch_key
@@ -117,8 +120,7 @@ class ENVI():
         
         print("Computing Niche Covariance Matrices")
         
-        if batch_key not in spatial_data.obs.columns:
-            batch_key = -1
+
     
         self.spatial_data.obsm['COVET'], self.spatial_data.obsm['COVET_SQRT'], self.CovGenes = compute_covet(self.spatial_data, self.k_nearest, self.num_cov_genes, self.cov_genes, spatial_key = self.spatial_key, batch_key = self.batch_key)
     
