@@ -12,6 +12,7 @@ from jax import random
 from functools import partial
 import scipy.stats
 import numpy as np
+import pandas as pd
 
 from typing import Callable, Any, Optional
 import scanpy as sc
@@ -238,3 +239,17 @@ def compute_covet(spatial_data, k = 8, g = 64, genes = [], spatial_key = 'spatia
     return(CovMats.astype('float32'), CovMatsTransformed.astype('float32'), np.asarray(CovGenes).astype('str'))
 
 
+def niche_cell_type(spatial_data, kNN, spatial_key = 'spatial', cell_type_key = 'cell_type', batch_key = -1):
+    from sklearn.preprocessing import OneHotEncoder
+    
+    if(batch_key == -1):        
+        kNNGraph = sklearn.neighbors.kneighbors_graph(spatial_data.obsm[spatial_key], n_neighbors=kNN, mode='connectivity', n_jobs=-1).tocoo()
+        knn_index = np.reshape(np.asarray(kNNGraph.col), [spatial_data.obsm[spatial_key].shape[0], kNN])
+    else:
+        knn_index = BatchKNN(spatial_data.obsm[spatial_key], spatial_data.obs[batch_key], kNN)
+    
+    one_hot_enc = OneHotEncoder().fit(np.asarray(list(set(spatial_data.obs[cell_type_key]))).reshape([-1,1]))
+    cell_type_one_hot = one_hot_enc.transform(np.asarray(spatial_data.obs[cell_type_key]).reshape([-1,1])).reshape([spatial_data.obs['cell_type'].shape[0], -1]).todense()
+    
+    cell_type_niche = pd.DataFrame(cell_type_one_hot[knn_index].sum(axis = 1), index = spatial_data.obs_names, columns = list(one_hot_enc.categories_[0]))
+    return(cell_type_niche)
