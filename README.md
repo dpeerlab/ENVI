@@ -27,17 +27,19 @@ To run ENVI:
     envi_model.infer_niche_celltype()
     
     st_data.obsm['envi_latent'] = envi_model.spatial_data.obsm['envi_latent']
+    st_data.uns['COVET_genes'] =  envi_model.CovGenes
     st_data.obsm['COVET'] = envi_model.spatial_data.obsm['COVET']
     st_data.obsm['COVET_SQRT'] = envi_model.spatial_data.obsm['COVET_SQRT']
-    st_data.uns['COVET_genes'] =  envi_model.CovGenes
-    st_data.obsm['imputation'] = envi_model.spatial_data.obsm['imputation']
     st_data.obsm['cell_type_niche'] = envi_model.spatial_data.obsm['cell_type_niche']
+    st_data.obsm['imputation'] = envi_model.spatial_data.obsm['imputation']
+
 
     sc_data.obsm['envi_latent'] = envi_model.sc_data.obsm['envi_latent']
+    sc_data.uns['COVET_genes'] =  envi_model.CovGenes
     sc_data.obsm['COVET'] = envi_model.sc_data.obsm['COVET']
     sc_data.obsm['COVET_SQRT'] = envi_model.sc_data.obsm['COVET_SQRT']
     sc_data.obsm['cell_type_niche'] = envi_model.sc_data.obsm['cell_type_niche']
-    sc_data.uns['COVET_genes'] =  envi_model.CovGenes
+    
 
 And to just compute COVET for spatial data:
 
