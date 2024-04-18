@@ -9,7 +9,7 @@ This implementation is written in Python3 and relies on jax, flax, sklearn, scip
 
 To install JAX, simply run the command:
 
-    pip install --upgrade "jax[cuda11_pip]==0.4.23" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+    pip install -U "jax[cuda12_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 
 And to install ENVI along with the rest of the requirements: 
 
@@ -23,20 +23,22 @@ To run ENVI:
     
     envi_model.train()
     envi_model.impute_genes()
-    envi_model.infer_niche()
-     
+    envi_model.infer_niche_covet()
+    envi_model.infer_niche_celltype()
     
     st_data.obsm['envi_latent'] = envi_model.spatial_data.obsm['envi_latent']
     st_data.obsm['COVET'] = envi_model.spatial_data.obsm['COVET']
     st_data.obsm['COVET_SQRT'] = envi_model.spatial_data.obsm['COVET_SQRT']
     st_data.uns['COVET_genes'] =  envi_model.CovGenes
     st_data.obsm['imputation'] = envi_model.spatial_data.obsm['imputation']
+    st_data.obsm['cell_type_niche'] = envi_model.spatial_data.obsm['cell_type_niche']
 
     sc_data.obsm['envi_latent'] = envi_model.sc_data.obsm['envi_latent']
     sc_data.obsm['COVET'] = envi_model.sc_data.obsm['COVET']
     sc_data.obsm['COVET_SQRT'] = envi_model.sc_data.obsm['COVET_SQRT']
+    sc_data.obsm['cell_type_niche'] = envi_model.sc_data.obsm['cell_type_niche']
     sc_data.uns['COVET_genes'] =  envi_model.CovGenes
-    
+
 And to just compute COVET for spatial data:
 
     st_data.obsm['COVET'], st_data.obsm['COVET_SQRT'], st_data.uns['CovGenes'] = scenvi.compute_covet(st_data)

@@ -84,7 +84,6 @@ class ENVI():
                  **kwargs):
         
 
-        super(ENVI, self).__init__()
         
         
         self.spatial_data = spatial_data
@@ -110,16 +109,20 @@ class ENVI():
         self.spatial_data = self.spatial_data[:, list(self.overlap_genes)]
         self.sc_data = self.sc_data[:, list(self.overlap_genes) + list(self.non_overlap_genes)]
         
+        if batch_key not in spatial_data.obs.columns:
+            batch_key = -1
+            
         self.k_nearest = k_nearest
         self.spatial_key = spatial_key
         self.batch_key = batch_key
+        self.cov_genes = cov_genes
+        self.num_cov_genes = num_cov_genes
         
         print("Computing Niche Covariance Matrices")
         
-        if batch_key not in spatial_data.obs.columns:
-            batch_key = -1
+
     
-        self.spatial_data.obsm['COVET'], self.spatial_data.obsm['COVET_SQRT'], self.CovGenes = compute_covet(self.spatial_data, self.k_nearest, num_cov_genes, cov_genes, spatial_key = spatial_key, batch_key = batch_key)
+        self.spatial_data.obsm['COVET'], self.spatial_data.obsm['COVET_SQRT'], self.CovGenes = compute_covet(self.spatial_data, self.k_nearest, self.num_cov_genes, self.cov_genes, spatial_key = self.spatial_key, batch_key = self.batch_key)
     
     
         self.overlap_num = self.overlap_genes.shape[0]
@@ -432,7 +435,7 @@ class ENVI():
         
         print("Finished imputing missing gene for spatial data! See 'imputation' in obsm of ENVI.spatial_data")
      
-    def infer_niche(self):
+    def infer_niche_covet(self):
         """
         Infer covariance niche composition for single cell data
         
@@ -442,4 +445,19 @@ class ENVI():
         self.sc_data.obsm['COVET_SQRT'] = self.decode_cov(self.sc_data.obsm['envi_latent'])
         self.sc_data.obsm['COVET'] = np.matmul(self.sc_data.obsm['COVET_SQRT'], self.sc_data.obsm['COVET_SQRT'])
     
+    def infer_niche_celltype(self, cell_type_key = 'cell_type'):
+        """
+        Predict cell type abundence based one ENVI-inferred COVET representations 
         
+        Return:
+            no return, adds 'niche_cell_type' to ENVI.sc_data.obsm & ENVI.spatial_data.obsm
+        """
+         
+        self.spatial_data.obsm['cell_type_niche'] = niche_cell_type(self.spatial_data, self.k_nearest, spatial_key = self.spatial_key, cell_type_key = cell_type_key, batch_key = self.batch_key)
+        
+        regression_model = sklearn.neighbors.KNeighborsRegressor(n_neighbors=5).fit(self.spatial_data.obsm['COVET_SQRT'].reshape([self.spatial_data.shape[0], -1]), 
+                                                                                    self.spatial_data.obsm['cell_type_niche'])
+        
+        sc_cell_type = regression_model.predict(self.sc_data.obsm['COVET_SQRT'].reshape([self.sc_data.shape[0], -1]))
+        
+        self.sc_data.obsm['cell_type_niche'] = pd.DataFrame(sc_cell_type, index = self.sc_data.obs_names, columns = self.spatial_data.obsm['cell_type_niche'].columns)
