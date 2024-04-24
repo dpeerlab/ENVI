@@ -39,7 +39,6 @@ def log_normal_pdf(sample, mean):
     log_prob = jnd.Normal(loc = mean, scale = 1).log_prob(sample)
     return(jnp.mean(log_prob, axis = -1))
 
-
 def AOT_Distance(sample, mean):
     sample = jnp.reshape(sample, [sample.shape[0], -1])
     mean = jnp.reshape(mean, [mean.shape[0], -1])

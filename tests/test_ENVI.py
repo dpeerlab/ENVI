@@ -14,7 +14,7 @@ def example_model():
     return(envi_model)
 
 def test_train(example_model):
-    example_model.train(epochs = 1)
+    example_model.train(training_steps = 1)
     
 
     assert 'COVET' in  example_model.spatial_data.obsm
@@ -28,13 +28,13 @@ def test_train(example_model):
     
     
 def test_impute(example_model):
-    example_model.train(epochs = 1)
+    example_model.train(training_steps = 1)
     example_model.impute_genes()
 
     assert 'imputation' in  example_model.spatial_data.obsm
         
 def test_infer_niche(example_model):
-    example_model.train(epochs = 1)
+    example_model.train(training_steps = 1)
     example_model.infer_niche_covet()
     
     assert 'COVET_SQRT' in  example_model.sc_data.obsm
