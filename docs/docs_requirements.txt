@@ -1,0 +1,2 @@
+sphinx_rtd_theme >= 2.0.0
+myst_parser >= 3.0.0
