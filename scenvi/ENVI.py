@@ -29,32 +29,31 @@ from tqdm import trange
 class ENVI():
     
     """
-    ENVI Integrates spatial and single-cell data
+    initializes the ENVI model & computes COVET for spatial data
     
-    Parameters: 
-        spatial_data (anndata): anndata with spatial data, with obsm 'spatial' indicating spatial location of spot/segmented cell
-        sc_data (anndata): anndata with sinlge cell data
-        spatial_key (str): obsm key name with physical location of spots/cells (default 'spatial')
-        batch_key (str): obs key name of batch/sample of spatial data (default -1)
-        num_layers (int): number of neural network for decoders and encoders (default 3)
-        num_neurons (int): number of neurons in each layer (default 1024)
-        latent_dim (int): size of ENVI latent dimention (size 512)
-        k_nearest (int): number of physical neighbours to describe niche (default 8)
-        num_cov_genes (int): number of HVGs to compute niche covariance with default (64), if -1 takes all genes
-        cov_genes (list of str): manual genes to compute niche with (default [])
-        num_HVG (int): number of HVGs to keep for single cell data (default 2048)
-        sc_genes (list of str): manual genes to keep for sinlge cell data (default [])
-        spatial_dist (str): distribution used to describe spatial data (default pois, could be 'pois', 'nb', 'zinb', 'norm' or 'full_norm') 
-        sc_dist (str): distribution used to describe sinlge cell data (default nb, could be 'pois', 'nb', 'zinb', 'norm' or 'full_norm')
-        cov_dist (str): distribution used to describe niche covariance from spatial data (default OT, could be 'OT', 'wish' or 'norm')
-        prior_dist (str): prior distribution for latent (default normal)
-        comm_disp (bool): if True, spatial_dist and sc_dist share dispersion parameter(s) (default False)
-        const_disp (bool): if True, dispertion parameter(s) are only per gene, rather there per gene per sample (default False)
-        spatial_coeff (float): coefficient for spatial expression loss in total ELBO (default 1.0)
-        sc_coeff (float): coefficient for sinlge cell expression loss in total ELBO (default 1.0)
-        cov_coeff (float): coefficient for spatial niche loss in total ELBO (default 1.0)
-        kl_coeff (float): coefficient for latent prior loss in total ELBO (default 1.0)
-        log_input (float): if larger than zero, a log is applied to input with pseudocount of log_input (default 0.0)
+    
+    :param spatial_data (anndata): anndata with spatial data, with an obsm indicating spatial location of spot/segmented cell
+    :param sc_data (anndata): anndata with sinlge cell data
+    :param spatial_key (str): obsm key name with physical location of spots/cells (default 'spatial')
+    :param batch_key (str): obs key name of batch/sample of spatial data (default 'batch' if in spatial_data.obs, else -1)
+    :param num_layers (int): number of neural network for decoders and encoders (default 3)
+    :param num_neurons (int): number of neurons in each layer (default 1024)
+    :param latent_dim (int): size of ENVI latent dimention (size 512)
+    :param k_nearest (int): number of physical neighbours to describe niche (default 8)
+    :param num_cov_genes (int): number of HVGs to compute niche covariance with default (64), if -1 uses all genes
+    :param cov_genes (list of str): manual genes to compute niche with (default [])
+    :param num_HVG (int): number of HVGs to keep for single cell data (default 2048)
+    :param sc_genes (list of str): manual genes to keep for sinlge cell data (default [])
+    :param spatial_dist (str): distribution used to describe spatial data (default pois, could be 'pois', 'nb', 'zinb' or 'norm') 
+    :param sc_dist (str): distribution used to describe sinlge cell data (default nb, could be 'pois', 'nb', 'zinb' or 'norm')
+    :param spatial_coeff (float): coefficient for spatial expression loss in total ELBO (default 1.0)
+    :param sc_coeff (float): coefficient for sinlge cell expression loss in total ELBO (default 1.0)
+    :param cov_coeff (float): coefficient for spatial niche loss in total ELBO (default 1.0)
+    :param kl_coeff (float): coefficient for latent prior loss in total ELBO (default 1.0)
+    :param log_input (float): if larger than zero, a log is applied to ENVI input with pseudocount of log_input (default 0.1)
+    :param stable_eps (float): added value to log probabilty calculations to avoid NaNs during training (default 1e-6)
+    
+    :return: initialized ENVI model
     """ 
 
             
@@ -73,15 +72,12 @@ class ENVI():
                  sc_genes = [],
                  spatial_dist = 'pois',
                  sc_dist = 'nb',
-                 comm_disp = False,
-                 const_disp = False,
                  spatial_coeff = 1,
                  sc_coeff = 1,
                  cov_coeff = 1,
                  kl_coeff = 0.3, 
                  log_input = 0.1,
-                 stable_eps = 1e-6,
-                 **kwargs):
+                 stable_eps = 1e-6):
         
 
         
@@ -156,7 +152,7 @@ class ENVI():
         self.eps = stable_eps
         
         
-        print("Initializing VAE")
+        print("Initializing CVAE")
         
         self.model = CVAE(n_layers = self.num_layers,
                          n_neurons = self.num_neurons,
@@ -295,21 +291,36 @@ class ENVI():
         return(state, loss)
     
     
-    def train(self, epochs = 16000, batch_size = 128, verbose = 16, init_lr = 0.0001, decay_steps = 4000, key = random.key(0)):
+    def train(self, training_steps = 16000, batch_size = 128, verbose = 16, init_lr = 0.0001, decay_steps = 4000, key = random.key(0)):
+  
+    """
+    Set up optimization parameters and train the ENVI moodel
+    
+    
+    :param training_steps (int): number of gradient descent steps to train ENVI (default 16000)
+    :param batch_size (int): size of spatial and single-cell profiles sampled for each training step  (default 128)
+    :param verbose (int): amount of steps between each loss print statement (default 16)
+    :param init_lr (float): initial learning rate for ADAM optimizer with exponential decay (default 1e-4)
+    :param decay_steps (int): number of steps before each learning rate decay (default 4000)
+    :param key (jax.random.key): random seed (default jax.random.key(0))
+    
+    :return: nothing
+    """ 
+        
         batch_size = min(self.sc_data.shape[0], min(self.spatial_data.shape[0], batch_size))
         
         key, subkey = random.split(key)
         state = self.create_train_state(subkey, init_lr = init_lr, decay_steps = decay_steps) 
         self.params = state.params
         
-        tq = trange(epochs, leave=True, desc = "")
+        tq = trange(training_steps, leave=True, desc = "")
         sc_loss_mean, spatial_loss_mean, cov_loss_mean, kl_loss_mean, count = 0, 0, 0, 0, 0
         
         sc_X = self.sc_data.X
         spatial_X =  self.spatial_data.X
         spatial_COVET =  self.spatial_data.obsm['COVET_SQRT']
         
-        for epoch in tq:
+        for training_step in tq:
             key, subkey1, subkey2 = random.split(key, num = 3)
             
             batch_spatial_ind = random.choice(key = subkey1, a = self.spatial_data.shape[0], shape = [batch_size], replace = False)
@@ -326,7 +337,7 @@ class ENVI():
 
             sc_loss_mean, spatial_loss_mean, cov_loss_mean, kl_loss_mean, count = sc_loss_mean + loss[1][0], spatial_loss_mean + loss[1][1], cov_loss_mean + loss[1][2], kl_loss_mean + loss[1][3], count + 1
 
-            if(epoch%verbose==0):
+            if(training_step%verbose==0):
                 print_statement = ''
                 for metric,value in zip(['spatial', 'sc', 'cov', 'kl'], [spatial_loss_mean, sc_loss_mean, cov_loss_mean, kl_loss_mean]):
                     print_statement = print_statement + ' ' + metric + ': {:.3e}'.format(value/count)
@@ -409,11 +420,10 @@ class ENVI():
         
     def latent_rep(self): 
         """
-        Compute latent embeddings for spatial and single cell data
+        Compute latent embeddings for spatial and single cell data, automatically performed after training
         
-        Return:
-            no return, adds 'envi_latent' ENVI.spatial_data.obsm and ENVI.spatial_data.obsm
-        """
+        :return: nothing, adds 'envi_latent' self.spatial_data.obsm and self.spatial_data.obsm
+        """ 
     
         self.spatial_data.obsm['envi_latent'] = self.encode(self.spatial_data.X, mode = 'spatial')
         self.sc_data.obsm['envi_latent'] = self.encode(self.sc_data[:, self.spatial_data.var_names].X, mode = 'sc')
@@ -422,10 +432,9 @@ class ENVI():
     
     def impute_genes(self):
         """
-        Imput full transcriptome for spatial data
+        Impute full transcriptome for spatial data
     
-        Return:
-            no return, adds 'imputation' to ENVI.spatial_data.obsm
+        :return: nothing adds 'imputation' to self.spatial_data.obsm
         """
             
     
@@ -436,12 +445,13 @@ class ENVI():
         print("Finished imputing missing gene for spatial data! See 'imputation' in obsm of ENVI.spatial_data")
      
     def infer_niche_covet(self):
-        """
-        Infer covariance niche composition for single cell data
         
-        Return:
-            no return, adds 'COVET_SQRT' and 'COVET' to ENVI.sc_data.obsm
         """
+        Predict COVET representation for single-cell data
+    
+        :return: nothing adds 'COVET_SQRT' and 'COVET' to self.spatial_data.obsm
+        """
+
         self.sc_data.obsm['COVET_SQRT'] = self.decode_cov(self.sc_data.obsm['envi_latent'])
         self.sc_data.obsm['COVET'] = np.matmul(self.sc_data.obsm['COVET_SQRT'], self.sc_data.obsm['COVET_SQRT'])
     
@@ -449,8 +459,9 @@ class ENVI():
         """
         Predict cell type abundence based one ENVI-inferred COVET representations 
         
-        Return:
-            no return, adds 'niche_cell_type' to ENVI.sc_data.obsm & ENVI.spatial_data.obsm
+        :param cell_type_key (string): key in spatial_data.obs where cell types are stored for environment composition (default 'cell_type')
+        
+        :return: nothing, adds 'niche_cell_type' to self.sc_data.obsm & self.spatial_data.obsm
         """
          
         self.spatial_data.obsm['cell_type_niche'] = niche_cell_type(self.spatial_data, self.k_nearest, spatial_key = self.spatial_key, cell_type_key = cell_type_key, batch_key = self.batch_key)

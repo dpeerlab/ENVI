@@ -20,7 +20,7 @@ import scanpy as sc
 import sklearn.neighbors
 
 class FeedForward(nn.Module):
-    """Transformer MLP / feed-forward block.
+    """MLP / feed-forward block.
 
     Attributes:
     config: TransformerConfig dataclass containing hyperparameters.
@@ -200,44 +200,6 @@ def CalcCovMats(spatial_data, kNN, genes, spatial_key = 'spatial', batch_key = -
     CovMats = CovMats + CovMats.mean() * 0.00001 * np.expand_dims(np.identity(CovMats.shape[-1]), axis=0) 
     return(CovMats)
 
-def compute_covet(spatial_data, k = 8, g = 64, genes = [], spatial_key = 'spatial', batch_key = -1):
-    
-    """
-    Compte niche covariance matrices for spatial data
-
-    Args:
-        spatial_data (anndata): anndata with spatial data, with obsm 'spatial' indicating spatial location of spot/segmented cell
-        k (int): number of nearest neighbours to define niche
-        g (int): number of HVG to compute niche covariance matricies
-        genes (list of str): list of genes to keep for niche covariance
-
-    Return:
-        CovMats: raw, untransformed niche covariance matrices
-        CovMatsTransformed: covariance matrices transformed into chosen cov_dist
-        NeighExp: Average geene expression in niche 
-        CovGenes: Genes used for niche covariance 
-    """
-        
-        
-
-    if(g == -1):
-        CovGenes = spatial_data.var_names
-    else:
-        if 'highly_variable' not in spatial_data.var.columns:
-            spatial_data.layers['log'] = np.log(spatial_data.X+1)
-            sc.pp.highly_variable_genes(spatial_data, n_top_genes = g, layer = 'log')
-        
-        
-        CovGenes = np.asarray(spatial_data.var_names[spatial_data.var.highly_variable])
-        if(len(genes) > 0):
-            CovGenes = np.union1d(CovGenes, genes)
-    
-    CovMats = CalcCovMats(spatial_data, k, genes = CovGenes, spatial_key = spatial_key, batch_key = batch_key)
-    CovMatsTransformed = MatSqrt(CovMats)
-
-    
-    return(CovMats.astype('float32'), CovMatsTransformed.astype('float32'), np.asarray(CovGenes).astype('str'))
-
 
 def niche_cell_type(spatial_data, kNN, spatial_key = 'spatial', cell_type_key = 'cell_type', batch_key = -1):
     from sklearn.preprocessing import OneHotEncoder
@@ -253,3 +215,44 @@ def niche_cell_type(spatial_data, kNN, spatial_key = 'spatial', cell_type_key = 
     
     cell_type_niche = pd.DataFrame(cell_type_one_hot[knn_index].sum(axis = 1), index = spatial_data.obs_names, columns = list(one_hot_enc.categories_[0]))
     return(cell_type_niche)
+
+def compute_covet(spatial_data, k = 8, g = 64, genes = [], spatial_key = 'spatial', batch_key = -1):
+    
+    """
+    Compute niche covariance matrices for spatial data, run with scenvi.compute_covet
+        
+    :param spatial_data (anndata): anndata with spatial data, with an obsm indicating spatial location of spot/segmented cell
+    :param k (int): number of nearest neighbours to define niche (default 8)
+    :param g (int): number of HVG to compute COVET representation on (default 64)
+    :param genes (list of str): list of genes to keep for niche covariance (default []
+    :param spatial_key (str): obsm key name with physical location of spots/cells (default 'spatial')
+    :param batch_key (str): obs key name of batch/sample of spatial data (default 'batch' if in spatial_data.obs, else -1)
+    
+    :return COVET: niche covariance matrices
+    :return COVET_SQRT: matrix square-root of niche covariance matrices for approximate OT
+    :return CovGenes: list of genes selected for COVET representation
+    """ 
+
+        
+        
+    
+    if(g == -1):
+        CovGenes = spatial_data.var_names
+    else:
+        if 'highly_variable' not in spatial_data.var.columns:
+            spatial_data.layers['log'] = np.log(spatial_data.X+1)
+            sc.pp.highly_variable_genes(spatial_data, n_top_genes = g, layer = 'log')
+        
+        
+        CovGenes = np.asarray(spatial_data.var_names[spatial_data.var.highly_variable])
+        if(len(genes) > 0):
+            CovGenes = np.union1d(CovGenes, genes)
+    
+    if batch_key not in spatial_data.obs.columns:
+        batch_key = -1
+            
+    COVET = CalcCovMats(spatial_data, k, genes = CovGenes, spatial_key = spatial_key, batch_key = batch_key)
+    COVET_SQRT = MatSqrt(CovMats)
+
+    
+    return(COVET.astype('float32'), COVET_SQRT.astype('float32'), np.asarray(CovGenes).astype('str'))
