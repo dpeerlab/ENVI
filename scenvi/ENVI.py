@@ -29,7 +29,7 @@ from tqdm import trange
 class ENVI():
     
     """
-    initializes the ENVI model & computes COVET for spatial data
+    Initializes the ENVI model & computes COVET for spatial data
     
     
     :param spatial_data (anndata): anndata with spatial data, with an obsm indicating spatial location of spot/segmented cell

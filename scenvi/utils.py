@@ -252,7 +252,7 @@ def compute_covet(spatial_data, k = 8, g = 64, genes = [], spatial_key = 'spatia
         batch_key = -1
             
     COVET = CalcCovMats(spatial_data, k, genes = CovGenes, spatial_key = spatial_key, batch_key = batch_key)
-    COVET_SQRT = MatSqrt(CovMats)
+    COVET_SQRT = MatSqrt(COVET)
 
     
     return(COVET.astype('float32'), COVET_SQRT.astype('float32'), np.asarray(CovGenes).astype('str'))
