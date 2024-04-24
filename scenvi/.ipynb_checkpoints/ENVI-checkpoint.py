@@ -29,7 +29,7 @@ from tqdm import trange
 class ENVI():
     
     """
-    initializes the ENVI model & computes COVET for spatial data
+    Initializes the ENVI model & computes COVET for spatial data
     
     
     :param spatial_data (anndata): anndata with spatial data, with an obsm indicating spatial location of spot/segmented cell
@@ -262,7 +262,6 @@ class ENVI():
     
     @partial(jit, static_argnums=(0, ))
     def train_step(self, state, spatial_inp, spatial_COVET, sc_inp, key = random.key(0)):
-        """Train for a single step."""
         
         key, subkey1, subkey2 = random.split(key, num = 3)
         
@@ -293,46 +292,46 @@ class ENVI():
     
     def train(self, training_steps = 16000, batch_size = 128, verbose = 16, init_lr = 0.0001, decay_steps = 4000, key = random.key(0)):
   
-    """
-    Set up optimization parameters and train the ENVI moodel
-    
-    
-    :param training_steps (int): number of gradient descent steps to train ENVI (default 16000)
-    :param batch_size (int): size of spatial and single-cell profiles sampled for each training step  (default 128)
-    :param verbose (int): amount of steps between each loss print statement (default 16)
-    :param init_lr (float): initial learning rate for ADAM optimizer with exponential decay (default 1e-4)
-    :param decay_steps (int): number of steps before each learning rate decay (default 4000)
-    :param key (jax.random.key): random seed (default jax.random.key(0))
-    
-    :return: nothing
-    """ 
+        """
+        Set up optimization parameters and train the ENVI moodel
+
+
+        :param training_steps (int): number of gradient descent steps to train ENVI (default 16000)
+        :param batch_size (int): size of spatial and single-cell profiles sampled for each training step  (default 128)
+        :param verbose (int): amount of steps between each loss print statement (default 16)
+        :param init_lr (float): initial learning rate for ADAM optimizer with exponential decay (default 1e-4)
+        :param decay_steps (int): number of steps before each learning rate decay (default 4000)
+        :param key (jax.random.key): random seed (default jax.random.key(0))
+
+        :return: nothing
+        """ 
         
         batch_size = min(self.sc_data.shape[0], min(self.spatial_data.shape[0], batch_size))
-        
+
         key, subkey = random.split(key)
         state = self.create_train_state(subkey, init_lr = init_lr, decay_steps = decay_steps) 
         self.params = state.params
-        
+
         tq = trange(training_steps, leave=True, desc = "")
         sc_loss_mean, spatial_loss_mean, cov_loss_mean, kl_loss_mean, count = 0, 0, 0, 0, 0
-        
+
         sc_X = self.sc_data.X
         spatial_X =  self.spatial_data.X
         spatial_COVET =  self.spatial_data.obsm['COVET_SQRT']
-        
+
         for training_step in tq:
             key, subkey1, subkey2 = random.split(key, num = 3)
-            
+
             batch_spatial_ind = random.choice(key = subkey1, a = self.spatial_data.shape[0], shape = [batch_size], replace = False)
             batch_sc_ind = random.choice(key = subkey2, a = self.sc_data.shape[0], shape = [batch_size], replace = False)
-            
+
             batch_spatial_exp, batch_spatial_cov = spatial_X[batch_spatial_ind],  spatial_COVET[batch_spatial_ind]
             batch_sc_exp = sc_X[batch_sc_ind]
-            
+
             key, subkey = random.split(key)
-            
+
             state, loss = self.train_step(state, batch_spatial_exp, batch_spatial_cov, batch_sc_exp, key = subkey)
-            
+
             self.params = state.params
 
             sc_loss_mean, spatial_loss_mean, cov_loss_mean, kl_loss_mean, count = sc_loss_mean + loss[1][0], spatial_loss_mean + loss[1][1], cov_loss_mean + loss[1][2], kl_loss_mean + loss[1][3], count + 1
@@ -345,7 +344,7 @@ class ENVI():
                 sc_loss_mean, spatial_loss_mean, cov_loss_mean, kl_loss_mean, count = 0, 0, 0, 0, 0
                 tq.set_description(print_statement)
                 tq.refresh() # to show 
-                
+
         self.latent_rep()
         
     @partial(jit, static_argnums=(0, ))
