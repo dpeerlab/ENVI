@@ -37,7 +37,7 @@ copyright = "2024, " + 'Doron Haviv'
 author = 'Doron Haviv'
 
 # The full version, including alpha/beta/rc tags
-release = '3.0.2'
+release = '0.3.2'
 
 
 # -- General configuration ---------------------------------------------------
