@@ -7,7 +7,7 @@
    :hidden:
    :caption: Tutorials:
 
-   notebooks/MOp_MERFISH_tutorial
+   tutorial/MOp_MERFISH_tutorial
    
 .. toctree::
    :hidden:
