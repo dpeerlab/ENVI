@@ -1,2 +1,10 @@
-sphinx_rtd_theme >= 2.0.0
-myst_parser >= 3.0.0
+sphinxcontrib-autoprogram
+sphinxcontrib-napoleon
+sphinx-autodocgen
+sphinx-github-style
+sphinx-mdinclude
+m2r2
+nbsphinx
+furo
+typing-extensions
+IPython
