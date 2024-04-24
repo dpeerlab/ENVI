@@ -45,4 +45,4 @@ And to just compute COVET for spatial data:
 
     st_data.obsm['COVET'], st_data.obsm['COVET_SQRT'], st_data.uns['CovGenes'] = scenvi.compute_covet(st_data)
         
-Please read our documentation at https://scenvi.readthedocs.io/ for more details!
+Please read our documentation and see a full tutorial at https://scenvi.readthedocs.io/ for more details!
