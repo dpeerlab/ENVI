@@ -11,11 +11,11 @@
    
 .. toctree::
    :hidden:
-   :maxdepth: 4
+   :maxdepth: 2
    :caption: Modules:
 
-   scenvi <scenvi>
-
+   ENVI <ENVI>
+   Utilities <utils>
 
    
 .. mdinclude:: ../../README.md
