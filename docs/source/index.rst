@@ -5,16 +5,18 @@
 
 .. toctree::
    :hidden:
+   :caption: Tutorials:
+
+    MOp_MERFISH_tutorial.ipynb
+   
+.. toctree::
+   :hidden:
    :maxdepth: 4
    :caption: Modules:
 
-   modules <modules>
+   scenvi <scenvi>
 
-.. toctree::
-   :hidden:
-   :caption: Tutorials:
 
-   MOp_MERFISH_tutorial.ipynb
    
 .. mdinclude:: ../../README.md
 
