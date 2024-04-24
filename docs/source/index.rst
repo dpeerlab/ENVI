@@ -11,7 +11,6 @@
    
 .. toctree::
    :hidden:
-   :maxdepth: 2
    :caption: Modules:
 
    ENVI <ENVI>
