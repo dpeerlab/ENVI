@@ -50,14 +50,11 @@ And to just compute COVET for spatial data:
     st_data.obsm['COVET'], st_data.obsm['COVET_SQRT'], st_data.uns['CovGenes'] = scenvi.compute_covet(st_data)
     
 .. toctree::
+   :hidden:
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Modules:
+
+   modules <modules>
 
 
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
