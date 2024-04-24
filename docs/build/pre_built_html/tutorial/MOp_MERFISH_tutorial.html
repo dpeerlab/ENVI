@@ -158,15 +158,6 @@
   <p class="caption" role="heading"><span class="caption-text">Tutorials:</span></p>
 <ul class="current">
 <li class="toctree-l1 current current-page"><a class="current reference internal" href="#">ENVI Tutorial:</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#Install-ENVI">Install ENVI</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#Importing">Importing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#Utility-Functions:">Utility Functions:</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#Data">Data</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#Running-ENVI">Running ENVI</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#ENVI-COVET-analysis:">ENVI COVET analysis:</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#Subtype-Depth">Subtype Depth</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#Niche-Cell-Type-Composition">Niche Cell Type Composition</a></li>
-<li class="toctree-l1"><a class="reference internal" href="#ENVI-imputation-on-Spatial-Data">ENVI imputation on Spatial Data</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Modules:</span></p>
 <ul>
@@ -229,10 +220,8 @@
 </pre></div>
 </div>
 </div>
-</section>
-</section>
 <section id="Install-ENVI">
-<h1>Install ENVI<a class="headerlink" href="#Install-ENVI" title="Link to this heading">¶</a></h1>
+<h3>Install ENVI<a class="headerlink" href="#Install-ENVI" title="Link to this heading">¶</a></h3>
 <p>ENVI can be installed directly with pip with the following command:</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
@@ -244,7 +233,7 @@
 </div>
 </section>
 <section id="Importing">
-<h1>Importing<a class="headerlink" href="#Importing" title="Link to this heading">¶</a></h1>
+<h3>Importing<a class="headerlink" href="#Importing" title="Link to this heading">¶</a></h3>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
@@ -283,7 +272,7 @@
 </div>
 </section>
 <section id="Utility-Functions:">
-<h1>Utility Functions:<a class="headerlink" href="#Utility-Functions:" title="Link to this heading">¶</a></h1>
+<h3>Utility Functions:<a class="headerlink" href="#Utility-Functions:" title="Link to this heading">¶</a></h3>
 <p>Some functions that are used in the analysis in this tutorial, feel free to switch to you own prefered versions</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
@@ -436,7 +425,7 @@
 </div>
 </section>
 <section id="Data">
-<h1>Data<a class="headerlink" href="#Data" title="Link to this heading">¶</a></h1>
+<h3>Data<a class="headerlink" href="#Data" title="Link to this heading">¶</a></h3>
 <p>Downloading Motor Cortex scRNA-seq and MERFISH data from the Pe’er lab aws and loading in with scanpy</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
@@ -491,6 +480,10 @@
 </pre></div>
 </div>
 </div>
+</section>
+</section>
+<section id="Plotting-the-Motor-Cortex-MERFISH">
+<h2>Plotting the Motor Cortex MERFISH<a class="headerlink" href="#Plotting-the-Motor-Cortex-MERFISH" title="Link to this heading">¶</a></h2>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
@@ -515,6 +508,9 @@
 <img alt="../_images/tutorial_MOp_MERFISH_tutorial_15_0.png" src="../_images/tutorial_MOp_MERFISH_tutorial_15_0.png" />
 </div>
 </div>
+</section>
+<section id="Plotting-the-Motor-Cortex-scRNAseq">
+<h2>Plotting the Motor Cortex scRNAseq<a class="headerlink" href="#Plotting-the-Motor-Cortex-scRNAseq" title="Link to this heading">¶</a></h2>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
 </pre></div>
@@ -552,9 +548,8 @@
 <img alt="../_images/tutorial_MOp_MERFISH_tutorial_18_0.png" src="../_images/tutorial_MOp_MERFISH_tutorial_18_0.png" />
 </div>
 </div>
-</section>
 <section id="Running-ENVI">
-<h1>Running ENVI<a class="headerlink" href="#Running-ENVI" title="Link to this heading">¶</a></h1>
+<h3>Running ENVI<a class="headerlink" href="#Running-ENVI" title="Link to this heading">¶</a></h3>
 <p>We first define and ENVI model which computes the COVET matrices of the spatial data and intializes the CVAE:</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
@@ -630,6 +625,10 @@ Finished imputing missing gene for spatial data! See &#39;imputation&#39; in obs
 </pre></div>
 </div>
 </div>
+</section>
+</section>
+<section id="Plot-UMAPs-of-ENVI-latent">
+<h2>Plot UMAPs of ENVI latent<a class="headerlink" href="#Plot-UMAPs-of-ENVI-latent" title="Link to this heading">¶</a></h2>
 <p>Double Checking that cell types co-embed from the MERFISH and scRNA-seq datasets</p>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
@@ -701,9 +700,8 @@ Finished imputing missing gene for spatial data! See &#39;imputation&#39; in obs
 <img alt="../_images/tutorial_MOp_MERFISH_tutorial_29_0.png" src="../_images/tutorial_MOp_MERFISH_tutorial_29_0.png" />
 </div>
 </div>
-</section>
-<section id="ENVI-COVET-analysis:">
-<h1>ENVI COVET analysis:<a class="headerlink" href="#ENVI-COVET-analysis:" title="Link to this heading">¶</a></h1>
+<section id="ENVI-COVET-analysis">
+<h3>ENVI COVET analysis<a class="headerlink" href="#ENVI-COVET-analysis" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Zooming on the Glutamatergic neuron, and using their COVET embedding for pseudo-depth prediction</p></li>
 </ul>
@@ -732,6 +730,10 @@ Finished imputing missing gene for spatial data! See &#39;imputation&#39; in obs
 </pre></div>
 </div>
 </div>
+</section>
+</section>
+<section id="Calculating-FDL-and-DC-on-COVET">
+<h2>Calculating FDL and DC on COVET<a class="headerlink" href="#Calculating-FDL-and-DC-on-COVET" title="Link to this heading">¶</a></h2>
 <ul class="simple">
 <li><p>Note that we are running FDL on COVET_SQRT, this is because the distance between COVET matrices is the L2 between their SQRT. We can simply run FDL (or DC, UMAP, PhenoGraph, etc.) on the COVET_SQRT to analyize COVET niche representation!</p></li>
 </ul>
@@ -786,6 +788,9 @@ AdjustSpeedAndApplyForces step  took  0.59  seconds
 Determing nearest neighbor graph...
 </pre></div></div>
 </div>
+</section>
+<section id="Reverse-DC-if-needed">
+<h2>Reverse DC if needed<a class="headerlink" href="#Reverse-DC-if-needed" title="Link to this heading">¶</a></h2>
 <ul class="simple">
 <li><p>DC direction is arbitrary; so flip DC direction if it’s backwards</p></li>
 <li><p>Should go from blue (shallow) to green (deep)</p></li>
@@ -799,6 +804,9 @@ Determing nearest neighbor graph...
 </pre></div>
 </div>
 </div>
+</section>
+<section id="Plot-DC-and-Depth">
+<h2>Plot DC and Depth<a class="headerlink" href="#Plot-DC-and-Depth" title="Link to this heading">¶</a></h2>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[24]:
 </pre></div>
@@ -881,9 +889,8 @@ Determing nearest neighbor graph...
 <img alt="../_images/tutorial_MOp_MERFISH_tutorial_41_0.png" src="../_images/tutorial_MOp_MERFISH_tutorial_41_0.png" />
 </div>
 </div>
-</section>
 <section id="Subtype-Depth">
-<h1>Subtype Depth<a class="headerlink" href="#Subtype-Depth" title="Link to this heading">¶</a></h1>
+<h3>Subtype Depth<a class="headerlink" href="#Subtype-Depth" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Box plot of cortical depth for each cell in every subtype</p></li>
 </ul>
@@ -929,7 +936,7 @@ Determing nearest neighbor graph...
 </div>
 </section>
 <section id="Niche-Cell-Type-Composition">
-<h1>Niche Cell Type Composition<a class="headerlink" href="#Niche-Cell-Type-Composition" title="Link to this heading">¶</a></h1>
+<h3>Niche Cell Type Composition<a class="headerlink" href="#Niche-Cell-Type-Composition" title="Link to this heading">¶</a></h3>
 ENVI uses COVET to predict the niche cell type abundence for each scRNA-seq cell. For each Sst subtype, we will compute the canonical niche composition:<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[147]:
 </pre></div>
@@ -949,6 +956,10 @@ ENVI uses COVET to predict the niche cell type abundence for each scRNA-seq cell
 </pre></div>
 </div>
 </div>
+</section>
+</section>
+<section id="Plot-as-Stacked-Bar-Plots">
+<h2>Plot as Stacked Bar Plots<a class="headerlink" href="#Plot-as-Stacked-Bar-Plots" title="Link to this heading">¶</a></h2>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[153]:
 </pre></div>
@@ -970,9 +981,8 @@ ENVI uses COVET to predict the niche cell type abundence for each scRNA-seq cell
 <img alt="../_images/tutorial_MOp_MERFISH_tutorial_51_0.png" src="../_images/tutorial_MOp_MERFISH_tutorial_51_0.png" />
 </div>
 </div>
-</section>
 <section id="ENVI-imputation-on-Spatial-Data">
-<h1>ENVI imputation on Spatial Data<a class="headerlink" href="#ENVI-imputation-on-Spatial-Data" title="Link to this heading">¶</a></h1>
+<h3>ENVI imputation on Spatial Data<a class="headerlink" href="#ENVI-imputation-on-Spatial-Data" title="Link to this heading">¶</a></h3>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[106]:
 </pre></div>
@@ -1022,6 +1032,8 @@ ENVI uses COVET to predict the niche cell type abundence for each scRNA-seq cell
 <script type="application/vnd.jupyter.widget-state+json">
 {"state": {}, "version_major": 2, "version_minor": 0}
 </script></section>
+</section>
+</section>
 
         </article>
       </div>
@@ -1080,18 +1092,35 @@ ENVI uses COVET to predict the niche cell type abundence for each scRNA-seq cell
             <ul>
 <li><a class="reference internal" href="#">ENVI Tutorial:</a><ul>
 <li><a class="reference internal" href="#What-is-COVET?">What is COVET?</a></li>
-<li><a class="reference internal" href="#What-is-ENVI?">What is ENVI?</a></li>
-</ul>
-</li>
+<li><a class="reference internal" href="#What-is-ENVI?">What is ENVI?</a><ul>
 <li><a class="reference internal" href="#Install-ENVI">Install ENVI</a></li>
 <li><a class="reference internal" href="#Importing">Importing</a></li>
 <li><a class="reference internal" href="#Utility-Functions:">Utility Functions:</a></li>
 <li><a class="reference internal" href="#Data">Data</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#Plotting-the-Motor-Cortex-MERFISH">Plotting the Motor Cortex MERFISH</a></li>
+<li><a class="reference internal" href="#Plotting-the-Motor-Cortex-scRNAseq">Plotting the Motor Cortex scRNAseq</a><ul>
 <li><a class="reference internal" href="#Running-ENVI">Running ENVI</a></li>
-<li><a class="reference internal" href="#ENVI-COVET-analysis:">ENVI COVET analysis:</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#Plot-UMAPs-of-ENVI-latent">Plot UMAPs of ENVI latent</a><ul>
+<li><a class="reference internal" href="#ENVI-COVET-analysis">ENVI COVET analysis</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#Calculating-FDL-and-DC-on-COVET">Calculating FDL and DC on COVET</a></li>
+<li><a class="reference internal" href="#Reverse-DC-if-needed">Reverse DC if needed</a></li>
+<li><a class="reference internal" href="#Plot-DC-and-Depth">Plot DC and Depth</a><ul>
 <li><a class="reference internal" href="#Subtype-Depth">Subtype Depth</a></li>
 <li><a class="reference internal" href="#Niche-Cell-Type-Composition">Niche Cell Type Composition</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#Plot-as-Stacked-Bar-Plots">Plot as Stacked Bar Plots</a><ul>
 <li><a class="reference internal" href="#ENVI-imputation-on-Spatial-Data">ENVI imputation on Spatial Data</a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 
           </div>
