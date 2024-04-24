@@ -9,6 +9,9 @@ __pycache__/
 *.so
 
 .ipynb_checkpoints
+.docs
+.dist
+
 
 # Distribution / packaging
 .Python

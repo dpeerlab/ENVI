@@ -20,11 +20,9 @@ import scanpy as sc
 import sklearn.neighbors
 
 class FeedForward(nn.Module):
-    """MLP / feed-forward block.
-
-    Attributes:
-    config: TransformerConfig dataclass containing hyperparameters.
-    out_dim: optionally specify out dimension.
+    
+    """
+    :meta private:
     """
 
     n_layers: int
@@ -33,6 +31,10 @@ class FeedForward(nn.Module):
     
     @nn.compact
     def __call__(self, x):
+        
+        """
+        :meta private:
+        """
         
         n_layers = self.n_layers
         n_neurons = self.n_neurons
@@ -70,13 +72,11 @@ class FeedForward(nn.Module):
 
     
 class CVAE(nn.Module):
-    """Transformer MLP / feed-forward block.
-
-    Attributes:
-    config: TransformerConfig dataclass containing hyperparameters.
-    out_dim: optionally specify out dimension.
+    
     """
-
+    :meta private:
+    """
+    
     n_layers: int
     n_neurons: int
     n_latent: int
@@ -85,6 +85,11 @@ class CVAE(nn.Module):
     
     
     def setup(self):
+        
+        """
+        :meta private:
+        """
+    
         n_layers = self.n_layers
         n_neurons = self.n_neurons
         n_latent = self.n_latent
@@ -105,6 +110,9 @@ class CVAE(nn.Module):
         
     def __call__(self, x, mode = 'spatial', key = random.key(0)):
         
+        """
+        :meta private:
+        """
         
         conf_const = 0 if mode == 'spatial' else 1 
         conf_neurons = jax.nn.one_hot(conf_const * jnp.ones(x.shape[0], dtype=jnp.int8), 2, dtype=jnp.float32)
@@ -126,24 +134,30 @@ class CVAE(nn.Module):
 
 @struct.dataclass
 class Metrics(metrics.Collection):
+    
+    """
+    :meta private:
+    """
+        
     enc_loss: metrics.Average.from_output('enc_loss')
     dec_loss: metrics.Average.from_output('dec_loss')
     enc_corr: metrics.Average.from_output('enc_corr')
     
 class TrainState(train_state.TrainState):
+    
+    """
+    :meta private:
+    """
+        
     metrics: Metrics
 
 
 def MatSqrt(Mats):
-    """
-    Computes psuedo matrix square root with tensorfow linear algebra on cpu
-
-    Args:
-        Mats (array): Matrices to compute square root of 
-    Return:
-        SqrtMats (np.array): psuedo matrix square of Mats
-    """
     
+    """
+    :meta private:
+    """
+        
     e,v = np.linalg.eigh(Mats)
     e = np.where(e < 0, 0, e)
     e = np.sqrt(e)
@@ -156,6 +170,10 @@ def MatSqrt(Mats):
 
 def BatchKNN(data, batch, k):
     
+    """
+    :meta private:
+    """
+        
     kNNGraphIndex = np.zeros(shape = (data.shape[0], k))
     
     for val in np.unique(batch):
@@ -171,20 +189,11 @@ def BatchKNN(data, batch, k):
 def CalcCovMats(spatial_data, kNN, genes, spatial_key = 'spatial', batch_key = -1):
     
         
+    
     """
-    Wrapper to compute niche covariance based on cell expression and location
-
-    Args:
-        spatial_data (anndata): anndata with spatial data, with obsm 'spatial' indicating spatial location of spot/segmented cell
-        kNN (int): number of nearest neighbours to define niche
-        spatial_key (str): obsm key name with physical location of spots/cells (default 'spatial')
-        batch_key (str): obs key name of batch/sample of spatial data (default -1)
-        MeanExp (np.array): expression vector to shift niche covariance with
-        weighted (bool): if True, weights covariance by spatial distance
-    Return:
-        CovMats: niche covariance matrices
-        kNNGraphIndex: indices of nearest spatial neighbours per cell
+    :meta private:
     """
+        
     ExpData = np.log(spatial_data[:, genes].X + 1)
     
     if(batch_key == -1):        
@@ -202,6 +211,11 @@ def CalcCovMats(spatial_data, kNN, genes, spatial_key = 'spatial', batch_key = -
 
 
 def niche_cell_type(spatial_data, kNN, spatial_key = 'spatial', cell_type_key = 'cell_type', batch_key = -1):
+    
+    """
+    :meta private:
+    """
+        
     from sklearn.preprocessing import OneHotEncoder
     
     if(batch_key == -1):        
@@ -233,9 +247,6 @@ def compute_covet(spatial_data, k = 8, g = 64, genes = [], spatial_key = 'spatia
     :return CovGenes: list of genes selected for COVET representation
     """ 
 
-        
-        
-    
     if(g == -1):
         CovGenes = spatial_data.var_names
     else:

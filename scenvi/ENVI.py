@@ -17,7 +17,7 @@ import numpy as np
 from typing import Callable, Any, Optional
 
 from scenvi.utils import *
-from scenvi.dists import *
+from scenvi._dists import *
 
 import tensorflow_probability.substrates.jax as jax_prob
 
@@ -32,26 +32,26 @@ class ENVI():
     Initializes the ENVI model & computes COVET for spatial data
     
     
-    :param spatial_data (anndata): anndata with spatial data, with an obsm indicating spatial location of spot/segmented cell
-    :param sc_data (anndata): anndata with sinlge cell data
-    :param spatial_key (str): obsm key name with physical location of spots/cells (default 'spatial')
-    :param batch_key (str): obs key name of batch/sample of spatial data (default 'batch' if in spatial_data.obs, else -1)
-    :param num_layers (int): number of neural network for decoders and encoders (default 3)
-    :param num_neurons (int): number of neurons in each layer (default 1024)
-    :param latent_dim (int): size of ENVI latent dimention (size 512)
-    :param k_nearest (int): number of physical neighbours to describe niche (default 8)
-    :param num_cov_genes (int): number of HVGs to compute niche covariance with default (64), if -1 uses all genes
-    :param cov_genes (list of str): manual genes to compute niche with (default [])
-    :param num_HVG (int): number of HVGs to keep for single cell data (default 2048)
-    :param sc_genes (list of str): manual genes to keep for sinlge cell data (default [])
+    :param spatial_data: (anndata) spatial transcriptomics data, with an obsm indicating spatial location of spot/segmented cell
+    :param sc_data: (anndata) complementary sinlge cell data
+    :param spatial_key: (str) obsm key name with physical location of spots/cells (default 'spatial')
+    :param batch_key: (str) obs key name of batch/sample of spatial data (default 'batch' if in spatial_data.obs, else -1)
+    :param num_layers: (int) number of neural network for decoders and encoders (default 3)
+    :param num_neurons: (int) number of neurons in each layer (default 1024)
+    :param latent_dim: (int) size of ENVI latent dimention (size 512)
+    :param k_nearest: (int) number of physical neighbours to describe niche (default 8)
+    :param num_cov_genes: (int) number of HVGs to compute niche covariance with (default ֿ64), if -1 uses all genes
+    :param cov_genes: (list of str) manual genes to compute niche with (default [])
+    :param num_HVG: (int) number of HVGs to keep for single cell data (default 2048)
+    :param sc_genes: (list of str) manual genes to keep for sinlge cell data (default [])
     :param spatial_dist (str): distribution used to describe spatial data (default pois, could be 'pois', 'nb', 'zinb' or 'norm') 
-    :param sc_dist (str): distribution used to describe sinlge cell data (default nb, could be 'pois', 'nb', 'zinb' or 'norm')
-    :param spatial_coeff (float): coefficient for spatial expression loss in total ELBO (default 1.0)
-    :param sc_coeff (float): coefficient for sinlge cell expression loss in total ELBO (default 1.0)
-    :param cov_coeff (float): coefficient for spatial niche loss in total ELBO (default 1.0)
-    :param kl_coeff (float): coefficient for latent prior loss in total ELBO (default 1.0)
-    :param log_input (float): if larger than zero, a log is applied to ENVI input with pseudocount of log_input (default 0.1)
-    :param stable_eps (float): added value to log probabilty calculations to avoid NaNs during training (default 1e-6)
+    :param sc_dist: (str) distribution used to describe sinlge cell data (default nb, could be 'pois', 'nb', 'zinb' or 'norm')
+    :param spatial_coeff: (float) coefficient for spatial expression loss in total ELBO (default 1.0)
+    :param sc_coeff: (float) coefficient for sinlge cell expression loss in total ELBO (default 1.0)
+    :param cov_coeff: (float) coefficient for spatial niche loss in total ELBO (default 1.0)
+    :param kl_coeff: (float) coefficient for latent prior loss in total ELBO (default 1.0)
+    :param log_input: (float) if larger than zero, a log is applied to ENVI input with pseudocount of log_input (default 0.1)
+    :param stable_eps: (float) added value to log probabilty calculations to avoid NaNs during training (default 1e-6)
     
     :return: initialized ENVI model
     """ 
@@ -164,11 +164,21 @@ class ENVI():
         print("Finished Initializing ENVI")
     
     def inp_log_fn(self, x):
+        
+        """
+        :meta private:
+        """
+            
         if(self.log_input > 0):
             return(jnp.log(x+self.log_input))
         return(x)
 
     def mean_sc(self, sc_inp):
+        
+        """
+        :meta private:
+        """
+        
         sc_inp = sc_inp[:, :self.dist_size_dict[self.sc_dist] * self.sc_data.shape[-1]]
         if(self.sc_dist == 'zinb'):
             sc_r, sc_p, sc_d = jnp.split(sc_inp, 3, axis = -1)
@@ -184,6 +194,11 @@ class ENVI():
             return(sc_l)
     
     def mean_spatial(self, spatial_inp):
+        
+        """
+        :meta private:
+        """
+        
         if(self.spatial_dist == 'zinb' or self.spatial_dist == 'nb'):
             spatial_inp = jnp.concatenate([spatial_inp[:, :self.spatial_data.shape[-1]],
                                            spatial_inp[:, -(self.dist_size_dict[self.spatial_dist] - 1) * self.spatial_data.shape[-1]:]], axis = -1)
@@ -204,6 +219,11 @@ class ENVI():
             return(spatial_l)
         
     def factor_sc(self, sc_inp, dec_exp):
+        
+        """
+        :meta private:
+        """
+        
         sc_neurons = dec_exp[:, :self.dist_size_dict[self.sc_dist] * self.sc_data.shape[-1]]
         
         if(self.sc_dist == 'zinb'):
@@ -221,6 +241,11 @@ class ENVI():
         return(sc_like)
     
     def factor_spatial(self, spatial_inp, dec_exp):
+        
+        """
+        :meta private:
+        """
+        
         if(self.spatial_dist == 'zinb' or self.spatial_dist == 'nb'):
             spatial_neurons = jnp.concatenate([dec_exp[:, :self.spatial_data.shape[-1]],
                                                dec_exp[:, -(self.dist_size_dict[self.spatial_dist] - 1) * self.spatial_data.shape[-1]:]], axis = -1)
@@ -242,10 +267,19 @@ class ENVI():
         return(spatial_like)     
     
     def grammian_cov(self, dec_cov):
+        
+        """
+        :meta private:
+        """
+        
         dec_cov = jax_prob.math.fill_triangular(dec_cov)
         return(jnp.matmul(dec_cov, dec_cov.transpose([0,2,1])))
         
     def create_train_state(self, key = random.key(0), init_lr = 0.0001, decay_steps = 4000):
+        
+        """
+        :meta private:
+        """
         
         key, subkey1, subkey2  = random.split(key, num = 3)
         params = self.model.init(rngs = {'params': subkey1},
@@ -262,6 +296,10 @@ class ENVI():
     
     @partial(jit, static_argnums=(0, ))
     def train_step(self, state, spatial_inp, spatial_COVET, sc_inp, key = random.key(0)):
+        
+        """
+        :meta private:
+        """
         
         key, subkey1, subkey2 = random.split(key, num = 3)
         
@@ -296,12 +334,12 @@ class ENVI():
         Set up optimization parameters and train the ENVI moodel
 
 
-        :param training_steps (int): number of gradient descent steps to train ENVI (default 16000)
-        :param batch_size (int): size of spatial and single-cell profiles sampled for each training step  (default 128)
-        :param verbose (int): amount of steps between each loss print statement (default 16)
-        :param init_lr (float): initial learning rate for ADAM optimizer with exponential decay (default 1e-4)
-        :param decay_steps (int): number of steps before each learning rate decay (default 4000)
-        :param key (jax.random.key): random seed (default jax.random.key(0))
+        :param training_steps: (int) number of gradient descent steps to train ENVI (default 16000)
+        :param batch_size: (int) size of spatial and single-cell profiles sampled for each training step  (default 128)
+        :param verbose: (int) amount of steps between each loss print statement (default 16)
+        :param init_lr: (float) initial learning rate for ADAM optimizer with exponential decay (default 1e-4)
+        :param decay_steps: (int) number of steps before each learning rate decay (default 4000)
+        :param key: (jax.random.key) random seed (default jax.random.key(0))
 
         :return: nothing
         """ 
@@ -349,18 +387,36 @@ class ENVI():
         
     @partial(jit, static_argnums=(0, ))
     def model_encoder(self, x):
+        
+        """
+        :meta private:
+        """
+        
         return(self.model.bind({'params': self.params}).encoder(x))
     
     @partial(jit, static_argnums=(0, ))
     def model_decoder_exp(self, x):
+        
+        """
+        :meta private:
+        """
+            
         return(self.model.bind({'params': self.params}).decoder_exp(x))
     
     @partial(jit, static_argnums=(0, ))
     def model_decoder_cov(self, x):
+        
+        """
+        :meta private:
+        """
         return(self.model.bind({'params': self.params}).decoder_cov(x))
     
     def encode(self, x, mode = 'spatial', max_batch = 256):
         
+        """
+        :meta private:
+        """
+            
         conf_const = 0 if mode == 'spatial' else 1 
         conf_neurons = jax.nn.one_hot(conf_const * jnp.ones(x.shape[0], dtype=jnp.int8), 2, dtype=jnp.float32)
         
@@ -378,6 +434,10 @@ class ENVI():
     
     def decode_exp(self, x, mode = 'spatial', max_batch = 256):
         
+        """
+        :meta private:
+        """
+            
         conf_const = 0 if mode == 'spatial' else 1 
         conf_neurons = jax.nn.one_hot(conf_const * jnp.ones(x.shape[0], dtype=jnp.int8), 2, dtype=jnp.float32)
         
@@ -403,6 +463,10 @@ class ENVI():
     
     def decode_cov(self, x, max_batch = 256):
         
+        """
+        :meta private:
+        """
+            
         conf_const = 0
         conf_neurons = jax.nn.one_hot(conf_const * jnp.ones(x.shape[0], dtype=jnp.int8), 2, dtype=jnp.float32)
         
@@ -418,6 +482,7 @@ class ENVI():
         return(dec)
         
     def latent_rep(self): 
+        
         """
         Compute latent embeddings for spatial and single cell data, automatically performed after training
         
@@ -427,15 +492,13 @@ class ENVI():
         self.spatial_data.obsm['envi_latent'] = self.encode(self.spatial_data.X, mode = 'spatial')
         self.sc_data.obsm['envi_latent'] = self.encode(self.sc_data[:, self.spatial_data.var_names].X, mode = 'sc')
         
-
-    
     def impute_genes(self):
+        
         """
         Impute full transcriptome for spatial data
     
         :return: nothing adds 'imputation' to self.spatial_data.obsm
         """
-            
     
         self.spatial_data.obsm['imputation'] = pd.DataFrame(self.decode_exp(self.spatial_data.obsm['envi_latent'],  mode = 'sc'), 
                                                             columns = self.sc_data.var_names, 
@@ -444,7 +507,7 @@ class ENVI():
         print("Finished imputing missing gene for spatial data! See 'imputation' in obsm of ENVI.spatial_data")
      
     def infer_niche_covet(self):
-        
+
         """
         Predict COVET representation for single-cell data
     
@@ -455,6 +518,7 @@ class ENVI():
         self.sc_data.obsm['COVET'] = np.matmul(self.sc_data.obsm['COVET_SQRT'], self.sc_data.obsm['COVET_SQRT'])
     
     def infer_niche_celltype(self, cell_type_key = 'cell_type'):
+        
         """
         Predict cell type abundence based one ENVI-inferred COVET representations 
         

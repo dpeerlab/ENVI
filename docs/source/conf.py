@@ -6,15 +6,23 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'scENVI'
-copyright = '2024, Doron Haviv'
-author = 'Doron Haviv'
-release = '0.3.0'
+
+project = 'scenvi'
+copyright = '2024, DoronHav'
+author = 'DoronHav'
+release = '0.3.1'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ['sphinx_rtd_theme', 'myst_parser']
+import os
+import sys
+sys.path.insert(0, os.path.abspath('../..'))
+
+extensions = [
+    'sphinx.ext.autodoc',
+    'sphinx_rtd_theme', 
+    'myst_parser']
 
 templates_path = ['_templates']
 exclude_patterns = []
@@ -26,3 +34,5 @@ exclude_patterns = []
 
 html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
+
+autoclass_content = 'both'
