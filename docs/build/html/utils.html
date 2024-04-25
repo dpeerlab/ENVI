@@ -2,12 +2,12 @@
 <html class="no-js" lang="en" data-content_root="./">
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
-    <meta name="color-scheme" content="light dark"><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="prev" title="ENVI" href="ENVI.html" />
 
     <!-- Generated with Sphinx 7.3.7 and Furo 2024.01.29 -->
         <title>Utilities - scenvi 0.3.2 documentation</title>
-      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=362ab14a" />
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=135e06be" />
     <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=36a5483c" />
     
@@ -134,7 +134,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
         <div class="visually-hidden">Toggle table of contents sidebar</div>
         <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
       </label>
@@ -190,41 +190,14 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
             <div class="visually-hidden">Toggle table of contents sidebar</div>
             <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
           </label>
         </div>
         <article role="main">
-          <section id="module-scenvi.utils">
-<span id="utilities"></span><h1>Utilities<a class="headerlink" href="#module-scenvi.utils" title="Link to this heading">¶</a></h1>
-<dl class="py function">
-<dt class="sig sig-object py" id="scenvi.utils.compute_covet">
-<span class="sig-prename descclassname"><span class="pre">scenvi.utils.</span></span><span class="sig-name descname"><span class="pre">compute_covet</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spatial_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">8</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">64</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">genes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spatial_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'spatial'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#scenvi.utils.compute_covet" title="Link to this definition">¶</a></dt>
-<dd><p>Compute niche covariance matrices for spatial data, run with scenvi.compute_covet</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>(</strong><strong>anndata</strong><strong>)</strong> (<em>spatial_data</em>) – anndata with spatial data, with an obsm indicating spatial location of spot/segmented cell</p></li>
-<li><p><strong>(</strong><strong>int</strong><strong>)</strong> (<em>g</em>) – number of nearest neighbours to define niche (default 8)</p></li>
-<li><p><strong>(</strong><strong>int</strong><strong>)</strong> – number of HVG to compute COVET representation on (default 64)</p></li>
-<li><p><strong>str</strong><strong>)</strong> (<em>genes</em><em> (</em><em>list of</em>) – list of genes to keep for niche covariance (default []</p></li>
-<li><p><strong>(</strong><strong>str</strong><strong>)</strong> (<em>batch_key</em>) – obsm key name with physical location of spots/cells (default ‘spatial’)</p></li>
-<li><p><strong>(</strong><strong>str</strong><strong>)</strong> – obs key name of batch/sample of spatial data (default ‘batch’ if in spatial_data.obs, else -1)</p></li>
-</ul>
-</dd>
-<dt class="field-even">Return COVET<span class="colon">:</span></dt>
-<dd class="field-even"><p>niche covariance matrices</p>
-</dd>
-<dt class="field-odd">Return COVET_SQRT<span class="colon">:</span></dt>
-<dd class="field-odd"><p>matrix square-root of niche covariance matrices for approximate OT</p>
-</dd>
-<dt class="field-even">Return CovGenes<span class="colon">:</span></dt>
-<dd class="field-even"><p>list of genes selected for COVET representation</p>
-</dd>
-</dl>
-</dd></dl>
-
+          <section id="utilities">
+<h1>Utilities<a class="headerlink" href="#utilities" title="Link to this heading">¶</a></h1>
 </section>
 
         </article>
@@ -262,27 +235,8 @@
         
       </footer>
     </div>
-    <aside class="toc-drawer">
+    <aside class="toc-drawer no-toc">
       
-      
-      <div class="toc-sticky toc-scroll">
-        <div class="toc-title-container">
-          <span class="toc-title">
-            On this page
-          </span>
-        </div>
-        <div class="toc-tree-container">
-          <div class="toc-tree">
-            <ul>
-<li><a class="reference internal" href="#">Utilities</a><ul>
-<li><a class="reference internal" href="#scenvi.utils.compute_covet"><code class="docutils literal notranslate"><span class="pre">compute_covet()</span></code></a></li>
-</ul>
-</li>
-</ul>
-
-          </div>
-        </div>
-      </div>
       
       
     </aside>

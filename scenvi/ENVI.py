@@ -44,7 +44,7 @@ class ENVI():
     :param cov_genes: (list of str) manual genes to compute niche with (default [])
     :param num_HVG: (int) number of HVGs to keep for single cell data (default 2048)
     :param sc_genes: (list of str) manual genes to keep for sinlge cell data (default [])
-    :param spatial_dist (str): distribution used to describe spatial data (default pois, could be 'pois', 'nb', 'zinb' or 'norm') 
+    :param spatial_dist: (str) distribution used to describe spatial data (default pois, could be 'pois', 'nb', 'zinb' or 'norm') 
     :param sc_dist: (str) distribution used to describe sinlge cell data (default nb, could be 'pois', 'nb', 'zinb' or 'norm')
     :param spatial_coeff: (float) coefficient for spatial expression loss in total ELBO (default 1.0)
     :param sc_coeff: (float) coefficient for sinlge cell expression loss in total ELBO (default 1.0)
