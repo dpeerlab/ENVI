@@ -123,6 +123,10 @@ class CVAE(nn.Module):
 
 @struct.dataclass
 class Metrics(metrics.Collection):
+    """
+    :meta private:
+    """
+
     enc_loss: metrics.Average
     dec_loss: metrics.Average
     enc_corr: metrics.Average
@@ -257,12 +261,12 @@ def compute_covet(
     """
     Compute niche covariance matrices for spatial data, run with scenvi.compute_covet
 
-    :param spatial_data (anndata): anndata with spatial data, with an obsm indicating spatial location of spot/segmented cell
-    :param k (int): number of nearest neighbours to define niche (default 8)
-    :param g (int): number of HVG to compute COVET representation on (default 64)
+    :param spatial_data: (anndata) spatial data, with an obsm indicating spatial location of spot/segmented cell
+    :param k: (int) number of nearest neighbours to define niche (default 8)
+    :param g: (int) number of HVG to compute COVET representation on (default 64)
     :param genes (list of str): list of genes to keep for niche covariance (default []
-    :param spatial_key (str): obsm key name with physical location of spots/cells (default 'spatial')
-    :param batch_key (str): obs key name of batch/sample of spatial data (default 'batch' if in spatial_data.obs, else -1)
+    :param spatial_key: (str) obsm key name with physical location of spots/cells (default 'spatial')
+    :param batch_key: (str) obs key name of batch/sample of spatial data (default 'batch' if in spatial_data.obs, else -1)
 
     :return COVET: niche covariance matrices
     :return COVET_SQRT: matrix square-root of niche covariance matrices for approximate OT
