@@ -631,7 +631,7 @@ class ENVI:
         """
         Impute full transcriptome for spatial data
 
-        :return: nothing adds 'imputation' to self.spatial_data.obsm
+        :return: nothing, adds 'imputation' to self.spatial_data.obsm
         """
 
         self.spatial_data.obsm["imputation"] = pd.DataFrame(
@@ -648,7 +648,11 @@ class ENVI:
         """
         Predict COVET representation for single-cell data
 
+<<<<<<< HEAD
         :return: nothing adds 'COVET_SQRT' and 'COVET' to self.sc_data.obsm
+=======
+        :return: nothing, adds 'COVET_SQRT' and 'COVET' to self.spatial_data.obsm
+>>>>>>> main
         """
 
         self.sc_data.obsm["COVET_SQRT"] = self.decode_cov(
@@ -662,7 +666,7 @@ class ENVI:
         """
         Predict cell type abundence based one ENVI-inferred COVET representations
 
-        :param cell_type_key (string): key in spatial_data.obs where cell types are stored for environment composition (default 'cell_type')
+        :param cell_type_key: (string) key in spatial_data.obs where cell types are stored for environment composition (default 'cell_type')
 
         :return: nothing, adds 'niche_cell_type' to self.sc_data.obsm & self.spatial_data.obsm
         """
