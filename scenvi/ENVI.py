@@ -7,7 +7,7 @@ import optax
 import pandas as pd
 import scanpy as sc
 import sklearn.neighbors
-import tensorflow_probability.substrates.jax as jax_prob
+import tensorflow_probability.substrates.jax as jax_prob # type: ignore
 from flax import linen as nn
 from jax import jit, random
 from tqdm import trange
@@ -648,11 +648,7 @@ class ENVI:
         """
         Predict COVET representation for single-cell data
 
-<<<<<<< HEAD
         :return: nothing adds 'COVET_SQRT' and 'COVET' to self.sc_data.obsm
-=======
-        :return: nothing, adds 'COVET_SQRT' and 'COVET' to self.spatial_data.obsm
->>>>>>> main
         """
 
         self.sc_data.obsm["COVET_SQRT"] = self.decode_cov(
