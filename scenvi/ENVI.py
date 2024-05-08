@@ -648,7 +648,7 @@ class ENVI:
         """
         Predict COVET representation for single-cell data
 
-        :return: nothing adds 'COVET_SQRT' and 'COVET' to self.sc_data.obsm
+        :return: nothing, adds 'COVET_SQRT' and 'COVET' to self.sc_data.obsm
         """
 
         self.sc_data.obsm["COVET_SQRT"] = self.decode_cov(
