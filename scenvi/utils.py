@@ -9,7 +9,7 @@ from flax import linen as nn
 from flax import struct
 from flax.training import train_state
 from jax import random
-
+import scipy.sparse
 
 class FeedForward(nn.Module):
     """
@@ -254,7 +254,6 @@ def niche_cell_type(
     )
     return cell_type_niche
 
-
 def compute_covet(
     spatial_data, k=8, g=64, genes=[], spatial_key="spatial", batch_key=-1
 ):
@@ -277,8 +276,15 @@ def compute_covet(
         CovGenes = spatial_data.var_names
     else:
         if "highly_variable" not in spatial_data.var.columns:
-            spatial_data.layers["log"] = np.log(spatial_data.X + 1)
-            sc.pp.highly_variable_genes(spatial_data, n_top_genes=g, layer="log")
+            if 'log' in spatial_data.layers.keys():
+                sc.pp.highly_variable_genes(spatial_data, n_top_genes=g, layer="log")
+            elif('log1p' in spatial_data.layers.keys()):
+                sc.pp.highly_variable_genes(spatial_data, n_top_genes=g, layer="log1p")
+            elif(spatial_data.X.min() < 0):
+                sc.pp.highly_variable_genes(spatial_data, n_top_genes=g)
+            else:
+                spatial_data.layers["log"] = np.log(spatial_data.X + 1)
+                sc.pp.highly_variable_genes(spatial_data, n_top_genes=g, layer="log")
 
         CovGenes = np.asarray(spatial_data.var_names[spatial_data.var.highly_variable])
         if len(genes) > 0:
