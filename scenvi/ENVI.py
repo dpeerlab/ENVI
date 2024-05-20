@@ -82,14 +82,14 @@ class ENVI:
 
         if "highly_variable" not in self.sc_data.var.columns:
             if 'log' in self.sc_data.layers.keys():
-                sc.pp.highly_variable_genes(self.sc_data, n_top_genes=g, layer="log")
+                sc.pp.highly_variable_genes(self.sc_data, n_top_genes=num_HVG, layer="log")
             elif('log1p' in self.sc_data.layers.keys()):
-                sc.pp.highly_variable_genes(self.sc_data, n_top_genes=g, layer="log1p")
+                sc.pp.highly_variable_genes(self.sc_data, n_top_genes=num_HVG, layer="log1p")
             elif(self.sc_data.X.min() < 0):
-                sc.pp.highly_variable_genes(self.sc_data, n_top_genes=g)
+                sc.pp.highly_variable_genes(self.sc_data, n_top_genes=num_HVG)
             else:
                 sc_data.layers["log"] = np.log(self.sc_data.X + 1)
-                sc.pp.highly_variable_genes(self.sc_data, n_top_genes=g, layer="log")
+                sc.pp.highly_variable_genes(self.sc_data, n_top_genes=num_HVG, layer="log")
 
         sc_genes_keep = np.union1d(
             self.sc_data.var_names[self.sc_data.var.highly_variable], self.spatial_data.var_names
