@@ -161,7 +161,7 @@ class ENVI:
         self.cov_coeff = cov_coeff
         self.kl_coeff = kl_coeff
 
-        if self.sc_dist == "norm" or self.spatial_dist == "norm":
+        if self.sc_dist == "norm" or self.spatial_dist == "norm" or self.spatial_data.X.min()<0 or self.sc_data.X.min()<0:
             self.log_input = -1
         else:
             self.log_input = log_input
