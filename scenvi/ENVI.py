@@ -657,9 +657,9 @@ class ENVI:
         :return: nothing, adds 'COVET_SQRT' and 'COVET' to self.sc_data.obsm
         """
 
-        self.sc_data.obsm["COVET_SQRT"] = self.decode_cov(
+        self.sc_data.obsm["COVET_SQRT"] = np.asarray(self.decode_cov(
             self.sc_data.obsm["envi_latent"]
-        )
+        ))
         self.sc_data.obsm["COVET"] = np.matmul(
             self.sc_data.obsm["COVET_SQRT"], self.sc_data.obsm["COVET_SQRT"]
         )
