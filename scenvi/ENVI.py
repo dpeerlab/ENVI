@@ -76,6 +76,8 @@ class ENVI:
         log_input=0.1,
         stable_eps=1e-6,
     ):
+        
+        print("DEBUG")
 
         self.spatial_data = spatial_data[:, np.intersect1d(spatial_data.var_names, sc_data.var_names)]
         self.sc_data = sc_data
@@ -496,7 +498,7 @@ class ENVI:
 
         self.latent_rep()
 
-    @partial(jit, static_argnums=(0,))
+    # @partial(jit, static_argnums=(0,))
     def model_encoder(self, x):
         """
         :meta private:
@@ -504,7 +506,7 @@ class ENVI:
 
         return self.model.bind({"params": self.params}).encoder(x)
 
-    @partial(jit, static_argnums=(0,))
+    # @partial(jit, static_argnums=(0,))
     def model_decoder_exp(self, x):
         """
         :meta private:
@@ -512,14 +514,14 @@ class ENVI:
 
         return self.model.bind({"params": self.params}).decoder_exp(x)
 
-    @partial(jit, static_argnums=(0,))
+    # @partial(jit, static_argnums=(0,))
     def model_decoder_cov(self, x):
         """
         :meta private:
         """
         return self.model.bind({"params": self.params}).decoder_cov(x)
 
-    def encode(self, x, mode="spatial", max_batch=256):
+    def encode(self, x, mode="spatial", max_batch=64):
         """
         :meta private:
         """
@@ -547,7 +549,7 @@ class ENVI:
             )
         return enc
 
-    def decode_exp(self, x, mode="spatial", max_batch=256):
+    def decode_exp(self, x, mode="spatial", max_batch=64):
         """
         :meta private:
         """
@@ -591,7 +593,7 @@ class ENVI:
                 )
         return dec
 
-    def decode_cov(self, x, max_batch=256):
+    def decode_cov(self, x, max_batch=64):
         """
         :meta private:
         """
