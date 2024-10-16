@@ -626,12 +626,12 @@ class ENVI:
         :return: nothing, adds 'envi_latent' self.spatial_data.obsm and self.spatial_data.obsm
         """
 
-        self.spatial_data.obsm["envi_latent"] = self.encode(
+        self.spatial_data.obsm["envi_latent"] = np.asarray(self.encode(
             self.spatial_data.X, mode="spatial"
-        )
-        self.sc_data.obsm["envi_latent"] = self.encode(
+        ))
+        self.sc_data.obsm["envi_latent"] = np.asarray(self.encode(
             self.sc_data[:, self.spatial_data.var_names].X, mode="sc"
-        )
+        ))
 
     def impute_genes(self):
         """
@@ -657,9 +657,9 @@ class ENVI:
         :return: nothing, adds 'COVET_SQRT' and 'COVET' to self.sc_data.obsm
         """
 
-        self.sc_data.obsm["COVET_SQRT"] = self.decode_cov(
+        self.sc_data.obsm["COVET_SQRT"] = np.asarray(self.decode_cov(
             self.sc_data.obsm["envi_latent"]
-        )
+        ))
         self.sc_data.obsm["COVET"] = np.matmul(
             self.sc_data.obsm["COVET_SQRT"], self.sc_data.obsm["COVET_SQRT"]
         )
