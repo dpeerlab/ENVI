@@ -10,7 +10,7 @@ import sklearn.neighbors
 import tensorflow_probability.substrates.jax as jax_prob # type: ignore
 from flax import linen as nn
 from jax import jit, random
-from tqdm import trange
+from tqdm import trange, tqdm
 
 from scenvi._dists import (
     KL,
@@ -37,10 +37,11 @@ class ENVI:
     :param num_neurons: (int) number of neurons in each layer (default 1024)
     :param latent_dim: (int) size of ENVI latent dimention (size 512)
     :param k_nearest: (int) number of physical neighbours to describe niche (default 8)
+    :param covet_batch_size: (int) batch size for COVET computation (default 256)
     :param num_cov_genes: (int) number of HVGs to compute niche covariance with (default ֿ64), if -1 uses all genes
-    :param cov_genes: (list of str) manual genes to compute niche with (default [])
+    :param cov_genes: (list of str) manual genes to compute niche with (default None)
     :param num_HVG: (int) number of HVGs to keep for single cell data (default 2048)
-    :param sc_genes: (list of str) manual genes to keep for sinlge cell data (default [])
+    :param sc_genes: (list of str) manual genes to keep for sinlge cell data (default None)
     :param spatial_dist: (str) distribution used to describe spatial data (default pois, could be 'pois', 'nb', 'zinb' or 'norm')
     :param sc_dist: (str) distribution used to describe sinlge cell data (default nb, could be 'pois', 'nb', 'zinb' or 'norm')
     :param spatial_coeff: (float) coefficient for spatial expression loss in total ELBO (default 1.0)
@@ -63,10 +64,11 @@ class ENVI:
         num_neurons=1024,
         latent_dim=512,
         k_nearest=8,
+        covet_batch_size = 256,
         num_cov_genes=64,
-        cov_genes=[],
+        cov_genes=None,
         num_HVG=2048,
-        sc_genes=[],
+        sc_genes=None,
         spatial_dist="pois",
         sc_dist="nb",
         spatial_coeff=1,
@@ -77,44 +79,10 @@ class ENVI:
         stable_eps=1e-6,
     ):
         
-        print("DEBUG")
 
-        self.spatial_data = spatial_data[:, np.intersect1d(spatial_data.var_names, sc_data.var_names)]
-        self.sc_data = sc_data
-
-        if "highly_variable" not in self.sc_data.var.columns:
-            if 'log' in self.sc_data.layers.keys():
-                sc.pp.highly_variable_genes(self.sc_data, n_top_genes=num_HVG, layer="log")
-            elif('log1p' in self.sc_data.layers.keys()):
-                sc.pp.highly_variable_genes(self.sc_data, n_top_genes=num_HVG, layer="log1p")
-            elif(self.sc_data.X.min() < 0):
-                sc.pp.highly_variable_genes(self.sc_data, n_top_genes=num_HVG)
-            else:
-                sc_data.layers["log"] = np.log(self.sc_data.X + 1)
-                sc.pp.highly_variable_genes(self.sc_data, n_top_genes=num_HVG, layer="log")
-
-        sc_genes_keep = np.union1d(
-            self.sc_data.var_names[self.sc_data.var.highly_variable], self.spatial_data.var_names
+        self.spatial_data, self.sc_data, self.overlap_genes, self.non_overlap_genes = self._prepare_gene_sets(
+            spatial_data, sc_data, num_HVG, sc_genes
         )
-        if len(sc_genes) > 0:
-            sc_genes_keep = np.union1d(sc_genes_keep, sc_genes)
-
-        if self.sc_data.raw is None:
-            self.sc_data.raw = self.sc_data
-
-        self.sc_data = self.sc_data[:, sc_genes_keep]
-
-        self.overlap_genes = np.asarray(
-            np.intersect1d(self.spatial_data.var_names, self.sc_data.var_names)
-        )
-        self.non_overlap_genes = np.asarray(
-            list(set(self.sc_data.var_names) - set(self.spatial_data.var_names))
-        )
-
-        self.spatial_data = self.spatial_data[:, list(self.overlap_genes)]
-        self.sc_data = self.sc_data[
-            :, list(self.overlap_genes) + list(self.non_overlap_genes)
-        ]
 
         if batch_key not in spatial_data.obs.columns:
             batch_key = -1
@@ -123,7 +91,7 @@ class ENVI:
         self.spatial_key = spatial_key
         self.batch_key = batch_key
         self.cov_genes = cov_genes
-        self.num_cov_genes = num_cov_genes
+        self.num_cov_genes = min(num_cov_genes, self.spatial_data.shape[1])
 
         print("Computing Niche Covariance Matrices")
 
@@ -132,12 +100,13 @@ class ENVI:
             self.spatial_data.obsm["COVET_SQRT"],
             self.CovGenes,
         ) = compute_covet(
-            self.spatial_data,
-            self.k_nearest,
-            self.num_cov_genes,
-            self.cov_genes,
+            spatial_data = self.spatial_data,
+            k = self.k_nearest,
+            g = self.num_cov_genes,
+            genes = self.cov_genes,
             spatial_key=self.spatial_key,
             batch_key=self.batch_key,
+            batch_size = covet_batch_size
         )
 
         self.overlap_num = self.overlap_genes.shape[0]
@@ -170,8 +139,6 @@ class ENVI:
 
         self.eps = stable_eps
 
-        print("Initializing CVAE")
-
         self.model = CVAE(
             n_layers=self.num_layers,
             n_neurons=self.num_neurons,
@@ -191,6 +158,74 @@ class ENVI:
             return jnp.log(x + self.log_input)
         return x
 
+    def _prepare_gene_sets(self, spatial_data, sc_data, num_HVG, user_provided_genes=None):
+        """
+        :meta private:
+        """
+        print("Preparing gene sets for ENVI analysis...")
+        
+        
+        # Make copies to avoid modifying inputs
+        spatial_obj = spatial_data.copy()
+        sc_obj = sc_data.copy()
+        
+        # First restrict spatial data to genes also in single-cell data
+        common_genes = np.intersect1d(spatial_obj.var_names, sc_obj.var_names)
+        spatial_obj = spatial_obj[:, common_genes]
+        
+        # Identify highly variable genes if not already done
+        if "highly_variable" not in sc_obj.var.columns:
+            log_layer = None
+            # Find or create appropriate log-transformed layer
+            if 'log' in sc_obj.layers.keys():
+                log_layer = "log"
+            elif 'log1p' in sc_obj.layers.keys():
+                log_layer = "log1p"
+            elif sc_obj.X.min() < 0:
+                # Data already log-transformed
+                pass
+            else:
+                # Create log-transformed layer
+                sc_obj.layers["log"] = np.log(sc_obj.X + 1)
+                log_layer = "log"
+                    
+            # Identify highly variable genes
+            if log_layer:
+                sc.pp.highly_variable_genes(sc_obj, n_top_genes=num_HVG, layer=log_layer)
+            else:
+                sc.pp.highly_variable_genes(sc_obj, n_top_genes=num_HVG)
+            
+            print(f"Identified {num_HVG} highly variable genes from single-cell data")
+        else:
+            print("Using pre-computed highly variable genes from single-cell data")
+        
+        # Store raw data if not already s tored
+        if sc_obj.raw is None:
+            sc_obj.raw = sc_obj
+                
+        # Determine genes to keep in single-cell data
+        hvg_genes = sc_obj.var_names[sc_obj.var.highly_variable]
+        genes_to_keep = np.union1d(hvg_genes, spatial_obj.var_names)
+        
+        # Add user-provided genes if any
+        if user_provided_genes and len(user_provided_genes) > 0:
+            genes_to_keep = np.union1d(genes_to_keep, user_provided_genes)
+                
+        # Subset single-cell data to genes of interest
+        sc_obj = sc_obj[:, genes_to_keep]
+        
+        # Identify overlap and non-overlap genes
+        overlap_genes = np.intersect1d(spatial_obj.var_names, sc_obj.var_names)
+        non_overlap_genes = np.setdiff1d(sc_obj.var_names, spatial_obj.var_names)
+        
+        print(f"Gene selection: {len(overlap_genes)} shared genes, {len(non_overlap_genes)} unique to single-cell")
+        
+        # Final filtering of both datasets
+        spatial_obj = spatial_obj[:, overlap_genes]
+        sc_obj = sc_obj[:, np.concatenate([overlap_genes, non_overlap_genes])]
+        
+        return spatial_obj, sc_obj, overlap_genes, non_overlap_genes
+    
     def mean_sc(self, sc_inp):
         """
         :meta private:
@@ -534,6 +569,7 @@ class ENVI:
         x_conf = jnp.concatenate([self.inp_log_fn(x), conf_neurons], axis=-1)
 
         if x_conf.shape[0] < max_batch:
+            print("Encoding")
             enc = jnp.split(self.model_encoder(x_conf), 2, axis=-1)[0]
         else:  # For when the GPU can't pass all point-clouds at once
             num_split = int(x_conf.shape[0] / max_batch) + 1
@@ -543,7 +579,7 @@ class ENVI:
                     jnp.split(self.model_encoder(x_conf_split[split_ind]), 2, axis=-1)[
                         0
                     ]
-                    for split_ind in range(num_split)
+                    for split_ind in tqdm(range(num_split), desc="Encoding", leave=True)
                 ],
                 axis=0,
             )
@@ -563,6 +599,7 @@ class ENVI:
 
         if mode == "spatial":
             if x_conf.shape[0] < max_batch:
+                print("Decoding expression")
                 dec = self.mean_spatial(self.model_decoder_exp(x_conf))
             else:  # For when the GPU can't pass all point-clouds at once
                 num_split = int(x_conf.shape[0] / max_batch) + 1
@@ -572,12 +609,13 @@ class ENVI:
                         self.mean_spatial(
                             self.model_decoder_exp(x_conf_split[split_ind])
                         )
-                        for split_ind in range(num_split)
+                        for split_ind in tqdm(range(num_split), desc="Decoding expression", leave=True)
                     ],
                     axis=0,
-                )
+                ) 
         else:
             if x_conf.shape[0] < max_batch:
+                print("Decoding expression")
                 dec = self.mean_sc(
                     self.model.bind({"params": self.params}).decoder_exp(x_conf)
                 )
@@ -587,7 +625,7 @@ class ENVI:
                 dec = np.concatenate(
                     [
                         self.mean_sc(self.model_decoder_exp(x_conf_split[split_ind]))
-                        for split_ind in range(num_split)
+                        for split_ind in tqdm(range(num_split), desc="Decoding expression", leave=True)
                     ],
                     axis=0,
                 )
@@ -598,22 +636,16 @@ class ENVI:
         :meta private:
         """
 
-        conf_const = 0
-        conf_neurons = jax.nn.one_hot(
-            conf_const * jnp.ones(x.shape[0], dtype=jnp.int8), 2, dtype=jnp.float32
-        )
-
-        x_conf = jnp.concatenate([x, conf_neurons], axis=-1)
-
-        if x_conf.shape[0] < max_batch:
-            dec = self.grammian_cov(self.model_decoder_cov(x_conf))
+        if x.shape[0] < max_batch:
+            print("Decoding covet")
+            dec = self.grammian_cov(self.model_decoder_cov(x))
         else:  # For when the GPU can't pass all point-clouds at once
-            num_split = int(x_conf.shape[0] / max_batch) + 1
-            x_conf_split = np.array_split(x_conf, num_split)
+            num_split = int(x.shape[0] / max_batch) + 1
+            x_split = np.array_split(x, num_split)
             dec = np.concatenate(
                 [
-                    self.grammian_cov(self.model_decoder_cov(x_conf_split[split_ind]))
-                    for split_ind in range(num_split)
+                    self.grammian_cov(self.model_decoder_cov(x_split[split_ind]))
+                    for split_ind in tqdm(range(num_split), desc="Decoding covet", leave=True)
                 ],
                 axis=0,
             )
@@ -625,7 +657,7 @@ class ENVI:
 
         :return: nothing, adds 'envi_latent' self.spatial_data.obsm and self.spatial_data.obsm
         """
-
+        print("Computing latent representations")
         self.spatial_data.obsm["envi_latent"] = np.asarray(self.encode(
             self.spatial_data.X, mode="spatial"
         ))
@@ -639,16 +671,13 @@ class ENVI:
 
         :return: nothing, adds 'imputation' to self.spatial_data.obsm
         """
-
+        print("Imputing missing genes for spatial data")
         self.spatial_data.obsm["imputation"] = pd.DataFrame(
             self.decode_exp(self.spatial_data.obsm["envi_latent"], mode="sc"),
             columns=self.sc_data.var_names,
             index=self.spatial_data.obs_names,
         )
 
-        print(
-            "Finished imputing missing gene for spatial data! See 'imputation' in obsm of ENVI.spatial_data"
-        )
 
     def infer_niche_covet(self):
         """
@@ -656,7 +685,7 @@ class ENVI:
 
         :return: nothing, adds 'COVET_SQRT' and 'COVET' to self.sc_data.obsm
         """
-
+        print("Infering niche COVET representation for single-cell data")
         self.sc_data.obsm["COVET_SQRT"] = np.asarray(self.decode_cov(
             self.sc_data.obsm["envi_latent"]
         ))
@@ -672,7 +701,7 @@ class ENVI:
 
         :return: nothing, adds 'niche_cell_type' to self.sc_data.obsm & self.spatial_data.obsm
         """
-
+        print("Infering cell type niche composition for single cell data")
         self.spatial_data.obsm["cell_type_niche"] = niche_cell_type(
             self.spatial_data,
             self.k_nearest,
