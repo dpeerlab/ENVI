@@ -91,7 +91,7 @@ class ENVI:
         self.spatial_key = spatial_key
         self.batch_key = batch_key
         self.cov_genes = cov_genes
-        self.num_cov_genes = num_cov_genes
+        self.num_cov_genes = min(num_cov_genes, self.spatial_data.shape[1])
 
         print("Computing Niche Covariance Matrices")
 

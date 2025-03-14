@@ -317,7 +317,7 @@ def compute_covet(
         batch_key = -1
     
     # Select genes for covariance calculation
-    if g == -1:
+    if g == -1 or g >= spatial_data.shape[1]:
         # Use all genes
         CovGenes = spatial_data.var_names
         print(f"Computing COVET using all {len(CovGenes)} genes")
@@ -347,9 +347,10 @@ def compute_covet(
                 n_top_genes=g, 
                 layer=layer if layer else None
             )
-            
             # Get HVG names
             hvg_genes = spatial_data_copy.var_names[spatial_data_copy.var.highly_variable]
+            if(len(hvg_genes) > g):
+                print(f"Fount {len(hvg_genes)} HVGs")
         else:
             # HVGs already calculated
             hvg_genes = spatial_data.var_names[spatial_data.var.highly_variable]
@@ -361,7 +362,7 @@ def compute_covet(
             CovGenes = np.union1d(CovGenes, genes)
             print(f"Added {len(genes)} user-specified genes to COVET calculation")
             
-    
+        print(f"Computing COVET using {len(CovGenes)} genes")
     # Calculate covariance matrices with batch processing
     COVET = calculate_covariance_matrices(
         spatial_data, k, genes=CovGenes, spatial_key=spatial_key, 
