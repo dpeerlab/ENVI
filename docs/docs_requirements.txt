@@ -9,3 +9,4 @@ furo
 typing-extensions
 IPython
 pandoc
+tomli
