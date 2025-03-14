@@ -30,5 +30,6 @@ jobs:
           PYPI_API_TOKEN: ${{ secrets.PYPI_TOKEN }}
         run: |
           poetry config pypi-token.pypi "$PYPI_API_TOKEN"
+          poetry version patch
           poetry build
           poetry publish --username __token__ --password "$PYPI_API_TOKEN"
