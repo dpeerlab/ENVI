@@ -79,7 +79,7 @@ templates_path = ["_templates"]
 exclude_patterns = ["_build", "**.ipynb_checkpoints"]
 
 # GitHub repository info
-github_user = "dpeerlab"  # Replace with your actual GitHub username
+github_user = "dpeerlabs"  # Replace with your actual GitHub username
 github_repo = "scenvi"      # Replace with your actual repository name 
 github_version = "main"     # Or your default branch
 
