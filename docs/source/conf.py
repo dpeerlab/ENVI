@@ -21,23 +21,37 @@
 import os
 import sys
 from pathlib import Path
+import datetime
+import tomli
 
 sys.path.insert(0, os.path.abspath("../../src"))
 
 this_directory = Path(__file__).parent
 
+# Get current year for copyright
+current_year = datetime.datetime.now().year
 
-
-
+# Get package version from pyproject.toml
+try:
+    pyproject_path = Path(__file__).parents[2] / "pyproject.toml"
+    if pyproject_path.exists():
+        with open(pyproject_path, "rb") as f:
+            pyproject_data = tomli.load(f)
+            package_version = pyproject_data.get("tool", {}).get("poetry", {}).get("version", "0.1.0")
+    else:
+        package_version = "0.1.0"
+except Exception as e:
+    print(f"Warning: Could not read version from pyproject.toml: {e}")
+    package_version = "0.1.0"
 
 # -- Project information -----------------------------------------------------
 
 project = "scenvi"
-copyright = "2024, " + 'Doron Haviv'
+copyright = f"{current_year}, Doron Haviv"
 author = 'Doron Haviv'
 
 # The full version, including alpha/beta/rc tags
-release = '0.3.6'
+release = package_version
 
 
 # -- General configuration ---------------------------------------------------
@@ -64,6 +78,14 @@ templates_path = ["_templates"]
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ["_build", "**.ipynb_checkpoints"]
 
+# GitHub repository info
+github_user = "dpeerlab"  # Replace with your actual GitHub username
+github_repo = "scenvi"      # Replace with your actual repository name 
+github_version = "main"     # Or your default branch
+
+# For sphinx-github-style extension when on ReadTheDocs
+if os.environ.get('READTHEDOCS') == 'True':
+    linkcode_url = f"https://github.com/{github_user}/{github_repo}/blob/{github_version}"
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -79,5 +101,3 @@ highlight_language = "none"
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = []
-
-
