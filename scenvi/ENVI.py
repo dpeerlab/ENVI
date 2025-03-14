@@ -637,7 +637,7 @@ class ENVI:
         """
 
         if x.shape[0] < max_batch:
-            print("Decoding covet")
+            print("Decoding covet representation")
             dec = self.grammian_cov(self.model_decoder_cov(x))
         else:  # For when the GPU can't pass all point-clouds at once
             num_split = int(x.shape[0] / max_batch) + 1
@@ -645,7 +645,7 @@ class ENVI:
             dec = np.concatenate(
                 [
                     self.grammian_cov(self.model_decoder_cov(x_split[split_ind]))
-                    for split_ind in tqdm(range(num_split), desc="Decoding covet", leave=True)
+                    for split_ind in tqdm(range(num_split), desc="Decoding covet representation", leave=True)
                 ],
                 axis=0,
             )
