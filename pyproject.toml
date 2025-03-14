@@ -7,10 +7,10 @@ license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-scanpy = "^1.10.0"
+scanpy = "^1.11.0"
 python = "^3.9"
-flax = "^0.8.4"
-optax = "^0.2.2"
+flax = "^0.10.4"
+optax = "^0.2.4"
 tensorflow_probability = "^0.22.0"
 clu = "^0.0.11"
 tqdm = "^4.66.1"
