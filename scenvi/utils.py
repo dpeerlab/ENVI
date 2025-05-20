@@ -12,6 +12,7 @@ from jax import random
 
 from sklearn.preprocessing import OneHotEncoder
 from tqdm import tqdm   
+import scipy.sparse
 
 class FeedForward(nn.Module):
     """
@@ -177,13 +178,21 @@ def batch_knn(data, batch, k):
     return kNNGraphIndex.astype("int")
 
 
-def calculate_covariance_matrices(spatial_data, kNN, genes, spatial_key="spatial", batch_key=-1, batch_size=None):
+def calculate_covariance_matrices(spatial_data, kNN, exp_data, spatial_key="spatial", batch_key=-1, batch_size=None):
     """
-    :meta private:
+    Calculate covariance matrices for each cell/spot in spatial data using provided expression data
+    
+    :param spatial_data: AnnData object with spatial coordinates
+    :param kNN: Number of nearest neighbors
+    :param exp_data: Pre-processed expression data to use for covariance calculation
+    :param spatial_key: Key for spatial coordinates in obsm
+    :param batch_key: Key for batch information in obs, or -1 for no batch
+    :param batch_size: Number of cells to process at once (for memory efficiency)
+    
+    :return: 3D array of covariance matrices
     """
     
-    ExpData = np.log(spatial_data[:, genes].X + 1)
-
+    # Get the KNN graph
     if batch_key == -1:
         kNNGraph = sklearn.neighbors.kneighbors_graph(
             spatial_data.obsm[spatial_key],
@@ -199,28 +208,27 @@ def calculate_covariance_matrices(spatial_data, kNN, genes, spatial_key="spatial
             spatial_data.obsm[spatial_key], spatial_data.obs[batch_key], kNN
         )
     
-    # Get the global mean for each gene (used as reference point)
-    global_mean = ExpData.mean(axis=0)
+    # Get the global mean for each feature
+    global_mean = exp_data.mean(axis=0)
     
     # Initialize the output covariance matrices
-    n_cells = ExpData.shape[0]
-    n_genes = len(genes)
-    CovMats = np.zeros((n_cells, n_genes, n_genes), dtype=np.float32)
+    n_cells = exp_data.shape[0]
+    n_features = exp_data.shape[1]
+    CovMats = np.zeros((n_cells, n_features, n_features), dtype=np.float32)
     
     # Process in batches if requested
     if batch_size is None or batch_size >= n_cells:
-        # Process all cells at once (original implementation)
+        # Process all cells at once
         print("Calculating covariance matrices for all cells/spots")
         DistanceMatWeighted = (
             global_mean[None, None, :]
-            - ExpData[kNNGraphIndex[np.arange(n_cells)]]
+            - exp_data[kNNGraphIndex[np.arange(n_cells)]]
         )
         
         CovMats = np.matmul(
             DistanceMatWeighted.transpose([0, 2, 1]), DistanceMatWeighted
         ) / (kNN - 1)
     else:
-        
         # Process in batches to save memory
         batch_indices = np.array_split(np.arange(n_cells), np.ceil(n_cells / batch_size))
         
@@ -231,7 +239,7 @@ def calculate_covariance_matrices(spatial_data, kNN, genes, spatial_key="spatial
             # Calculate the distance matrices for this batch
             batch_distances = (
                 global_mean[None, None, :]
-                - ExpData[batch_neighbors]
+                - exp_data[batch_neighbors]
             )
             
             # Calculate the covariance matrices for this batch
@@ -244,7 +252,7 @@ def calculate_covariance_matrices(spatial_data, kNN, genes, spatial_key="spatial
     
     # Add a small regularization term to ensure positive definiteness
     reg_term = CovMats.mean() * 0.00001
-    identity = np.eye(n_genes)[None, :, :]
+    identity = np.eye(n_features)[None, :, :]
     CovMats = CovMats + reg_term * identity
     
     return CovMats
@@ -292,7 +300,8 @@ def niche_cell_type(
     return cell_type_niche
 
 def compute_covet(
-    spatial_data, k=8, g=64, genes=None, spatial_key="spatial", batch_key="batch", batch_size=None
+    spatial_data, k=8, g=64, genes=None, spatial_key="spatial", batch_key="batch", 
+    batch_size=None, use_obsm=None, use_layer=None
 ):
     """
     Compute niche covariance matrices for spatial data, run with scenvi.compute_covet
@@ -303,11 +312,13 @@ def compute_covet(
     :param genes: (list of str) list of genes to keep for niche covariance (default [])
     :param spatial_key: (str) obsm key name with physical location of spots/cells (default 'spatial')
     :param batch_key: (str) obs key name of batch/sample of spatial data (default 'batch' if in spatial_data.obs, else -1)
-    :batch_size : (int)  Number of cells/spots to process at once for large datasets (default None)
+    :param batch_size: (int) Number of cells/spots to process at once for large datasets (default None)
+    :param use_obsm: (str) obsm key to use for COVET calculation instead of gene expression (e.g. 'X_pca', 'X_dc') (default None)
+    :param use_layer: (str) layer to use for COVET calculation instead of log-transformed X (e.g. 'log', 'log1p') (default None)
         
     :return COVET: niche covariance matrices
     :return COVET_SQRT: matrix square-root of niche covariance matrices for approximate OT
-    :return CovGenes: list of genes selected for COVET representation
+    :return CovGenes: list of genes selected for COVET representation (or feature names if using obsm)
     """
 
     genes = [] if genes is None else genes
@@ -316,61 +327,91 @@ def compute_covet(
     if batch_key not in spatial_data.obs.columns:
         batch_key = -1
     
-    # Select genes for covariance calculation
-    if g == -1 or g >= spatial_data.shape[1]:
-        # Use all genes
-        CovGenes = spatial_data.var_names
-        print(f"Computing COVET using all {len(CovGenes)} genes")
-    else:
-        # Check if highly variable genes need to be calculated
-        if "highly_variable" not in spatial_data.var.columns:
-            print(f"Identifying top {g} highly variable genes for COVET calculation")
-            # Create a copy to avoid modifying the input
-            spatial_data_copy = spatial_data.copy()
-            
-            # Determine appropriate layer for HVG calculation
-            if 'log' in spatial_data_copy.layers:
-                layer = "log"
-            elif 'log1p' in spatial_data_copy.layers:
-                layer = "log1p"
-            elif spatial_data_copy.X.min() < 0:
-                # Data is already log-transformed
-                layer = None
-            else:
-                # Create log layer
-                spatial_data_copy.layers["log"] = np.log(spatial_data_copy.X + 1)
-                layer = "log"
-            
-            # Calculate HVGs
-            sc.pp.highly_variable_genes(
-                spatial_data_copy, 
-                n_top_genes=g, 
-                layer=layer if layer else None
-            )
-            # Get HVG names
-            hvg_genes = spatial_data_copy.var_names[spatial_data_copy.var.highly_variable]
-            if(len(hvg_genes) > g):
-                print(f"Fount {len(hvg_genes)} HVGs")
-        else:
-            # HVGs already calculated
-            hvg_genes = spatial_data.var_names[spatial_data.var.highly_variable]
-            print(f"Using {len(hvg_genes)} pre-calculated highly variable genes for COVET")
+    # Determine data source: obsm, layer, or X
+    if use_obsm is not None:
+        if use_obsm not in spatial_data.obsm:
+            raise ValueError(f"obsm key '{use_obsm}' not found in spatial_data.obsm")
         
-        # Combine HVGs with manually specified genes
-        CovGenes = np.asarray(hvg_genes)
-        if len(genes) > 0:
-            CovGenes = np.union1d(CovGenes, genes)
-            print(f"Added {len(genes)} user-specified genes to COVET calculation")
+        # Use the specified obsm embedding
+        print(f"Computing COVET using obsm '{use_obsm}' with {spatial_data.obsm[use_obsm].shape[1]} dimensions")
+        CovGenes = [f"{use_obsm}_{i}" for i in range(spatial_data.obsm[use_obsm].shape[1])]
+        exp_data = spatial_data.obsm[use_obsm]
+        
+    else:
+        # Select genes for covariance calculation
+        if g == -1 or g >= spatial_data.shape[1]:
+            # Use all genes
+            CovGenes = spatial_data.var_names
+            print(f"Computing COVET using all {len(CovGenes)} genes")
+        else:
+            # Check if highly variable genes need to be calculated
+            if "highly_variable" not in spatial_data.var.columns:
+                print(f"Identifying top {g} highly variable genes for COVET calculation")
+                # Create a copy to avoid modifying the input
+                spatial_data_copy = spatial_data.copy()
+                
+                # Determine appropriate layer for HVG calculation
+                if use_layer is None:
+                    if 'log' in spatial_data_copy.layers:
+                        layer = "log"
+                    elif 'log1p' in spatial_data_copy.layers:
+                        layer = "log1p"
+                    elif spatial_data_copy.X.min() < 0:
+                        # Data is already log-transformed
+                        layer = None
+                    else:
+                        # Create log layer
+                        spatial_data_copy.layers["log"] = np.log(spatial_data_copy.X + 1)
+                        layer = "log"
+                else:
+                    layer = use_layer
+                
+                # Calculate HVGs
+                sc.pp.highly_variable_genes(
+                    spatial_data_copy, 
+                    n_top_genes=g, 
+                    layer=layer if layer else None
+                )
+                # Get HVG names
+                hvg_genes = spatial_data_copy.var_names[spatial_data_copy.var.highly_variable]
+                if(len(hvg_genes) > g):
+                    print(f"Found {len(hvg_genes)} HVGs")
+            else:
+                # HVGs already calculated
+                hvg_genes = spatial_data.var_names[spatial_data.var.highly_variable]
+                print(f"Using {len(hvg_genes)} pre-calculated highly variable genes for COVET")
             
-        print(f"Computing COVET using {len(CovGenes)} genes")
+            # Combine HVGs with manually specified genes
+            CovGenes = np.asarray(hvg_genes)
+            if len(genes) > 0:
+                CovGenes = np.union1d(CovGenes, genes)
+                print(f"Added {len(genes)} user-specified genes to COVET calculation")
+                
+            print(f"Computing COVET using {len(CovGenes)} genes")
+        
+        # Get expression data based on selected genes and specified layer
+        if use_layer is not None:
+            if use_layer not in spatial_data.layers:
+                raise ValueError(f"Layer '{use_layer}' not found in spatial_data.layers")
+            print(f"Using expression data from layer '{use_layer}'")
+            exp_data = spatial_data[:, CovGenes].layers[use_layer].toarray() if scipy.sparse.issparse(spatial_data.layers[use_layer]) else spatial_data[:, CovGenes].layers[use_layer]
+        else:
+            # Default: log-transform X if needed
+            if spatial_data.X.min() < 0:
+                # Data is already log-transformed
+                print("Using expression data from X (appears to be log-transformed)")
+                exp_data = spatial_data[:, CovGenes].X.toarray() if scipy.sparse.issparse(spatial_data.X) else spatial_data[:, CovGenes].X
+            else:
+                print("Log-transforming expression data from X")
+                exp_data = np.log(spatial_data[:, CovGenes].X.toarray() + 1) if scipy.sparse.issparse(spatial_data.X) else np.log(spatial_data[:, CovGenes].X + 1)
+    
     # Calculate covariance matrices with batch processing
     COVET = calculate_covariance_matrices(
-        spatial_data, k, genes=CovGenes, spatial_key=spatial_key, 
+        spatial_data, k, exp_data, spatial_key=spatial_key, 
         batch_key=batch_key, batch_size=batch_size
     )
     
     # Calculate matrix square root
-
     if batch_size is None or batch_size >= COVET.shape[0]:
         print("Computing matrix square root...")
         COVET_SQRT = batch_matrix_sqrt(COVET)
