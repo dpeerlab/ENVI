@@ -28,7 +28,6 @@ class ENVI:
     """
     Initializes the ENVI model & computes COVET for spatial data
 
-
     :param spatial_data: (anndata) spatial transcriptomics data, with an obsm indicating spatial location of spot/segmented cell
     :param sc_data: (anndata) complementary sinlge cell data
     :param spatial_key: (str) obsm key name with physical location of spots/cells (default 'spatial')
@@ -50,6 +49,8 @@ class ENVI:
     :param kl_coeff: (float) coefficient for latent prior loss in total ELBO (default 1.0)
     :param log_input: (float) if larger than zero, a log is applied to ENVI input with pseudocount of log_input (default 0.1)
     :param stable_eps: (float) added value to log probabilty calculations to avoid NaNs during training (default 1e-6)
+    :param covet_use_obsm: (str) obsm key to use for COVET calculation instead of gene expression (default None)
+    :param covet_use_layer: (str) layer to use for COVET calculation instead of log-transformed X (default None)
 
     :return: initialized ENVI model
     """
@@ -64,7 +65,7 @@ class ENVI:
         num_neurons=1024,
         latent_dim=512,
         k_nearest=8,
-        covet_batch_size = 256,
+        covet_batch_size=256,
         num_cov_genes=64,
         cov_genes=None,
         num_HVG=2048,
@@ -77,9 +78,10 @@ class ENVI:
         kl_coeff=0.3,
         log_input=0.1,
         stable_eps=1e-6,
+        covet_use_obsm=None,
+        covet_use_layer=None,
     ):
         
-
         self.spatial_data, self.sc_data, self.overlap_genes, self.non_overlap_genes = self._prepare_gene_sets(
             spatial_data, sc_data, num_HVG, sc_genes
         )
@@ -92,21 +94,33 @@ class ENVI:
         self.batch_key = batch_key
         self.cov_genes = cov_genes
         self.num_cov_genes = min(num_cov_genes, self.spatial_data.shape[1])
+        self.covet_use_obsm = covet_use_obsm
+        self.covet_use_layer = covet_use_layer
 
         print("Computing Niche Covariance Matrices")
+
+        # Add information about which data source is being used for COVET
+        if self.covet_use_obsm is not None:
+            print(f"Using obsm '{self.covet_use_obsm}' for COVET calculation")
+        elif self.covet_use_layer is not None:
+            print(f"Using layer '{self.covet_use_layer}' for COVET calculation")
+        else:
+            print("Using log-transformed gene expression for COVET calculation")
 
         (
             self.spatial_data.obsm["COVET"],
             self.spatial_data.obsm["COVET_SQRT"],
             self.CovGenes,
         ) = compute_covet(
-            spatial_data = self.spatial_data,
-            k = self.k_nearest,
-            g = self.num_cov_genes,
-            genes = self.cov_genes,
+            spatial_data=self.spatial_data,
+            k=self.k_nearest,
+            g=self.num_cov_genes,
+            genes=self.cov_genes,
             spatial_key=self.spatial_key,
             batch_key=self.batch_key,
-            batch_size = covet_batch_size
+            batch_size=covet_batch_size,
+            use_obsm=self.covet_use_obsm,
+            use_layer=self.covet_use_layer
         )
 
         self.overlap_num = self.overlap_genes.shape[0]
