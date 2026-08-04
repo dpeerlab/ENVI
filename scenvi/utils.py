@@ -1,3 +1,5 @@
+import warnings
+
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -211,10 +213,17 @@ def calculate_covariance_matrices(spatial_data, kNN, exp_data, spatial_key="spat
     # Get the global mean for each feature
     global_mean = exp_data.mean(axis=0)
     
-    # Initialize the output covariance matrices
+    # Initialize the output covariance matrices. The dtype has to match what the
+    # unbatched branch below produces (np.matmul on the centered data). With a fixed
+    # float32 buffer, passing batch_size instead accumulated in single precision --
+    # before the regularization term, which is derived from this stack, and before
+    # the matrix square root -- so a pure memory knob moved the numbers.
     n_cells = exp_data.shape[0]
     n_features = exp_data.shape[1]
-    CovMats = np.zeros((n_cells, n_features, n_features), dtype=np.float32)
+    CovMats = np.zeros(
+        (n_cells, n_features, n_features),
+        dtype=np.promote_types(exp_data.dtype, np.float32),
+    )
     
     # Process in batches if requested
     if batch_size is None or batch_size >= n_cells:
@@ -300,8 +309,8 @@ def niche_cell_type(
     return cell_type_niche
 
 def compute_covet(
-    spatial_data, k=8, g=64, genes=None, spatial_key="spatial", batch_key="batch", 
-    batch_size=None, use_obsm=None, use_layer=None
+    spatial_data, k=8, g=64, genes=None, spatial_key="spatial", batch_key="batch",
+    batch_size=None, use_obsm=None, use_layer=None, log_transform=None
 ):
     """
     Compute niche covariance matrices for spatial data, run with scenvi.compute_covet
@@ -315,18 +324,31 @@ def compute_covet(
     :param batch_size: (int) Number of cells/spots to process at once for large datasets (default None)
     :param use_obsm: (str) obsm key to use for COVET calculation instead of gene expression (e.g. 'X_pca', 'X_dc') (default None)
     :param use_layer: (str) layer to use for COVET calculation instead of log-transformed X (e.g. 'log', 'log1p') (default None)
-        
+    :param log_transform: (bool) whether to apply log(x + 1) to the selected expression data.
+        None (default) keeps the historical behaviour: data taken from `X` is log-transformed
+        unless it contains negative values, and data taken from `use_obsm`/`use_layer` is used
+        as is. Pass True or False to decide explicitly.
+
     :return COVET: niche covariance matrices
     :return COVET_SQRT: matrix square-root of niche covariance matrices for approximate OT
     :return CovGenes: list of genes selected for COVET representation (or feature names if using obsm)
     """
 
     genes = [] if genes is None else genes
-    
-    # Handle batch key
-    if batch_key not in spatial_data.obs.columns:
-        batch_key = -1
-    
+
+    # Handle batch key. Falling back to a single pooled kNN is only safe for the
+    # default: an explicitly requested batch_key that is missing is a mistake, and
+    # silently building niches that straddle samples gives no sign of it.
+    if batch_key != -1 and batch_key not in spatial_data.obs.columns:
+        if batch_key == "batch":
+            batch_key = -1
+        else:
+            raise ValueError(
+                f"batch_key '{batch_key}' is not a column of spatial_data.obs. "
+                f"Available columns: {list(spatial_data.obs.columns)}. "
+                "Pass batch_key=-1 to build a single kNN graph across all cells."
+            )
+
     # Determine data source: obsm, layer, or X
     if use_obsm is not None:
         if use_obsm not in spatial_data.obsm:
@@ -394,17 +416,40 @@ def compute_covet(
             if use_layer not in spatial_data.layers:
                 raise ValueError(f"Layer '{use_layer}' not found in spatial_data.layers")
             print(f"Using expression data from layer '{use_layer}'")
-            exp_data = spatial_data[:, CovGenes].layers[use_layer].toarray() if scipy.sparse.issparse(spatial_data.layers[use_layer]) else spatial_data[:, CovGenes].layers[use_layer]
+            exp_data = spatial_data[:, CovGenes].layers[use_layer]
         else:
-            # Default: log-transform X if needed
-            if spatial_data.X.min() < 0:
-                # Data is already log-transformed
-                print("Using expression data from X (appears to be log-transformed)")
-                exp_data = spatial_data[:, CovGenes].X.toarray() if scipy.sparse.issparse(spatial_data.X) else spatial_data[:, CovGenes].X
-            else:
-                print("Log-transforming expression data from X")
-                exp_data = np.log(spatial_data[:, CovGenes].X.toarray() + 1) if scipy.sparse.issparse(spatial_data.X) else np.log(spatial_data[:, CovGenes].X + 1)
-    
+            print("Using expression data from X")
+            exp_data = spatial_data[:, CovGenes].X
+
+        if scipy.sparse.issparse(exp_data):
+            exp_data = exp_data.toarray()
+
+    # Decide on the log transform once, now that the data source is settled.
+    if log_transform is None:
+        if use_obsm is not None or use_layer is not None:
+            # Handed over explicitly, so take it at face value.
+            log_transform = False
+        else:
+            # Historical heuristic. It reads non-negative data as raw counts, but
+            # log-normalized data is non-negative too, so it silently log-transforms
+            # a second time -- which changes COVET substantially. Warn rather than
+            # change the default, so existing results stay reproducible.
+            log_transform = spatial_data.X.min() >= 0
+            if log_transform:
+                warnings.warn(
+                    "compute_covet is applying log(x + 1) to spatial_data.X because it "
+                    "contains no negative values. If X is already normalized, this "
+                    "log-transforms it a second time and substantially changes COVET. "
+                    "Pass log_transform=False to use X as is, or log_transform=True to "
+                    "silence this warning.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+
+    if log_transform:
+        print("Log-transforming expression data")
+        exp_data = np.log(exp_data + 1)
+
     # Calculate covariance matrices with batch processing
     COVET = calculate_covariance_matrices(
         spatial_data, k, exp_data, spatial_key=spatial_key, 
