@@ -21,7 +21,8 @@ from scenvi._dists import (
     log_zinb_pdf,
 )
 
-from scenvi.utils import CVAE, Metrics, TrainState, compute_covet, niche_cell_type
+from scenvi._nn import CVAE, Metrics, TrainState
+from scenvi.utils import compute_covet, niche_cell_type
 
 
 class ENVI:
