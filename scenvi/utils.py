@@ -213,11 +213,7 @@ def calculate_covariance_matrices(spatial_data, kNN, exp_data, spatial_key="spat
     # Get the global mean for each feature
     global_mean = exp_data.mean(axis=0)
     
-    # Initialize the output covariance matrices. The dtype has to match what the
-    # unbatched branch below produces (np.matmul on the centered data). With a fixed
-    # float32 buffer, passing batch_size instead accumulated in single precision --
-    # before the regularization term, which is derived from this stack, and before
-    # the matrix square root -- so a pure memory knob moved the numbers.
+    # Match the unbatched branch's dtype so that batch_size stays numerically inert.
     n_cells = exp_data.shape[0]
     n_features = exp_data.shape[1]
     CovMats = np.zeros(
@@ -324,10 +320,8 @@ def compute_covet(
     :param batch_size: (int) Number of cells/spots to process at once for large datasets (default None)
     :param use_obsm: (str) obsm key to use for COVET calculation instead of gene expression (e.g. 'X_pca', 'X_dc') (default None)
     :param use_layer: (str) layer to use for COVET calculation instead of log-transformed X (e.g. 'log', 'log1p') (default None)
-    :param log_transform: (bool) whether to apply log(x + 1) to the selected expression data.
-        None (default) keeps the historical behaviour: data taken from `X` is log-transformed
-        unless it contains negative values, and data taken from `use_obsm`/`use_layer` is used
-        as is. Pass True or False to decide explicitly.
+    :param log_transform: (bool) whether to apply log(x + 1). None (default) estimates whether
+        the data is already log-transformed, True/False decide explicitly (default None)
 
     :return COVET: niche covariance matrices
     :return COVET_SQRT: matrix square-root of niche covariance matrices for approximate OT
