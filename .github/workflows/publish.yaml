@@ -1,62 +1,70 @@
+# Publish to PyPI when a GitHub release is published.
+#
+# Releasing is deliberately a two-step, human-initiated process:
+#
+#   1. bump `version` in pyproject.toml in a normal pull request, and merge it;
+#   2. draft a GitHub release tagged `v<version>` and publish it.
+#
+# Merging alone therefore no longer releases anything, so changes can be batched
+# and the version number can say what kind of change it is. The tag is checked
+# against the built distribution below, so the two cannot drift apart.
 name: Publish to PyPI
+
 on:
-  pull_request:
-    types:
-      - closed
-    branches:
-      - main
+  release:
+    types: [published]
+
+# Uploads use PyPI trusted publishing, so no API token is stored here.
+# See https://docs.pypi.org/trusted-publishers/
+permissions: {}
+
 jobs:
-  publish:
-    if: github.event.pull_request.merged == true
+  release:
+    name: Upload release to PyPI
     runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/scenvi
     permissions:
-      contents: write  # This is needed to push changes back to the repository
+      contents: read
+      id-token: write # mandatory for trusted publishing
+
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Get full history for version tracking
-      
-      - name: Set up Python
-        uses: actions/setup-python@v4
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: '3.x'
-      
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          version: '1.5.1'
-          virtualenvs-create: true
-      
-      - name: Configure Git
+          enable-cache: false
+
+      - name: Build sdist and wheel
+        run: uv build
+
+      - name: Check the release tag matches what was built
+        # Compared against the wheel rather than pyproject.toml, so this checks the
+        # artifact that is actually about to be uploaded.
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-      
-      - name: Update version and commit
-        run: |
-          # Get current version
-          CURRENT_VERSION=$(poetry version -s)
-          echo "Current version: $CURRENT_VERSION"
-          
-          # Bump patch version
-          poetry version patch
-          NEW_VERSION=$(poetry version -s)
-          echo "New version: $NEW_VERSION"
-          
-          # Commit the version change
-          git add pyproject.toml
-          git commit -m "Bump version to $NEW_VERSION [skip ci]"
-          git tag v$NEW_VERSION
-      
-      - name: Build and publish
-        env:
-          PYPI_API_TOKEN: ${{ secrets.PYPI_TOKEN }}
-        run: |
-          poetry config pypi-token.pypi "$PYPI_API_TOKEN"
-          poetry build
-          poetry publish --username __token__ --password "$PYPI_API_TOKEN"
-      
-      - name: Push changes to GitHub
-        run: |
-          git push origin HEAD:main
-          git push origin v$(poetry version -s)
+          set -euo pipefail
+          shopt -s nullglob # so a missing wheel counts as zero, not as the literal glob
+
+          wheels=(dist/*.whl)
+          if [ "${#wheels[@]}" -ne 1 ]; then
+            echo "::error::expected exactly one wheel in dist/, found ${#wheels[@]}"
+            exit 1
+          fi
+
+          # {distribution}-{version}-{python tag}-{abi tag}-{platform tag}.whl
+          version="$(basename "${wheels[0]}" | cut -d- -f2)"
+          tag="${GITHUB_REF_NAME#v}"
+
+          if [ "$tag" != "$version" ]; then
+            echo "::error::release tag '${GITHUB_REF_NAME}' does not match the built version '${version}'"
+            echo "Bump 'version' in pyproject.toml, or retag the release as 'v${version}'."
+            exit 1
+          fi
+          echo "Releasing version ${version}."
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1

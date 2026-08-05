@@ -7,6 +7,10 @@ on:
   workflow_dispatch:
   pull_request:
     branches: [main]
+  # Also test the merge result, so that main is known-good before a release is cut
+  # off it. Nothing re-checked main once publishing stopped happening on merge.
+  push:
+    branches: [main]
 
 jobs:
   build:
