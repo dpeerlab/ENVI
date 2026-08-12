@@ -7,7 +7,6 @@ import optax
 import pandas as pd
 import scanpy as sc
 import sklearn.neighbors
-import tensorflow_probability.substrates.jax as jax_prob # type: ignore
 from flax import linen as nn
 from jax import jit, random
 from tqdm import trange, tqdm
@@ -15,6 +14,7 @@ from tqdm import trange, tqdm
 from scenvi._dists import (
     KL,
     AOT_Distance,
+    fill_triangular,
     log_nb_pdf,
     log_normal_pdf,
     log_pos_pdf,
@@ -369,7 +369,7 @@ class ENVI:
         :meta private:
         """
 
-        dec_cov = jax_prob.math.fill_triangular(dec_cov)
+        dec_cov = fill_triangular(dec_cov)
         return jnp.matmul(dec_cov, dec_cov.transpose([0, 2, 1]))
 
     def create_train_state(self, key=random.key(0), init_lr=3e-4, decay_steps=100):
